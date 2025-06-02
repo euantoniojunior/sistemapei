@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Buscar Aluno - Sistema PEI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .form-container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h2 {
+      color: #003D7C; 
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #F7931E;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .resultados {
+      margin-top: 30px;
+    }
+    .card-historico {
+      background: #fef8ec;
+      border: 1px solid #eee;
+      border-left: 5px solid #F7931E;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .card-historico:hover {
+      background-color: #f9f9f9;
+      transform: translateY(-2px);
+    }
+    #msg {
+      margin-top: 10px;
+      font-size: 14px;
+      text-align: center;
+      font-weight: bold;
+    }
+    #msg.green {
+      color: green;
+    }
+    #msg.red {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h2>Buscar Aluno</h2>
+    <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+    <button onclick="buscarAluno()">Buscar</button>
+    <p id="msg"></p>
+    <div class="resultados" id="resultados"></div>
+  </div>
+
+  <script>
+    async function buscarAluno() {
+      const studentName = document.getElementById('studentName').value.trim();
+      const resultadosDiv = document.getElementById('resultados');
+      const msgEl = document.getElementById('msg');
+      if (!studentName) {
+        msgEl.innerText = "Por favor, digite um nome válido.";
+        msgEl.className = 'red';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
+        const alunos = await res.json();
+
+        if (!alunos.length) {
+          msgEl.innerText = "Nenhum aluno encontrado.";
+          msgEl.className = 'red';
+          resultadosDiv.innerHTML = '';
+          return;
+        }
+
+        msgEl.innerText = `${alunos.length} aluno(s) encontrado(s) para "${studentName}"`;
+        msgEl.className = 'green';
+        resultadosDiv.innerHTML = '';
+
+        alunos.forEach(aluno => {
+          resultadosDiv.innerHTML += `
+            <div class="card-historico" onclick="location.href='/cadastro?id=${aluno.id}'">
+              <strong>Nome:</strong> ${aluno.nome}<br>
+              <strong>Curso:</strong> ${aluno.curso || 'Não informado'}<br>
+              <strong>Unidade:</strong> ${aluno.unidade || 'Não informada'}<br>
+              <strong>Data de Elaboração:</strong> ${aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : 'N/A'}
+            </div>`;
+        });
+
+      } catch (err) {
+        console.error("Erro ao buscar aluno:", err);
+        msgEl.innerText = "❌ Erro ao buscar aluno.";
+        msgEl.className = 'red';
+      }
+    }
+  </script>
+</body>
+</html>
