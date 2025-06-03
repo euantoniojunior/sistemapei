@@ -5,6 +5,7 @@ from models.models import User
 from routes.auth import auth_bp
 from routes.pei import pei_bp
 import os
+from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 
 # ========== CONFIGURAÇÃO DA APLICAÇÃO ==========
@@ -13,10 +14,13 @@ app = Flask(
     static_folder='static',
     template_folder='templates'
 )
-#PASTA UPLOAD DE LAUDOS
+
+# Configurações de Upload de Arquivo
 UPLOAD_FOLDER = 'static/laudos'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite de 16MB para uploads
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Garante que a pasta exista
 
 # Configurações gerais
 CORS(app)
@@ -26,7 +30,7 @@ app.secret_key = os.getenv('SECRET_KEY', 'segredo_senac_2025')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pei.db').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Inicializa o banco
+# Inicializa banco
 db.init_app(app)
 
 # Registra os Blueprints
@@ -44,7 +48,6 @@ def login_required(f):
     return decorated_function
 
 # ========== ROTAS PRINCIPAIS ==========
-
 @app.route('/')
 def login_page():
     if 'user_id' in session:
@@ -67,9 +70,8 @@ def search_page():
     return render_template('search.html')
 
 @app.route('/register')
+@login_required
 def register_page():
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
     return render_template('register.html')
 
 @app.route('/historico')
