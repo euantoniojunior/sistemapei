@@ -20,6 +20,7 @@ class Student(db.Model):
     diagnostico_cid = db.Column(db.String(100))
     transtorno_identificado = db.Column(db.String(100))
     laudo_medico = db.Column(db.String(3))  # Sim/Não
+    laudo_medico_arquivo = db.Column(db.String(255))  # Nome do arquivo salvo em /static/laudos/
     psicologo = db.Column(db.String(150))
     psiquiatra = db.Column(db.String(150))
     psicopedagogo = db.Column(db.String(150))
