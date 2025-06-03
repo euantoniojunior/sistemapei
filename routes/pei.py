@@ -29,17 +29,19 @@ def criar_pei():
         conteudo_data = data['conteudo']
 
         # Campos obrigatórios
-        required_fields = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
-        missing = [field for field in required_fields if not aluno_data.get(field)]
-        if missing:
-            return jsonify({"error": "Campos obrigatórios ausentes", "campos": missing}), 400
+        campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
+        faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
+        if faltando:
+            return jsonify({
+                "error": "Campos obrigatórios ausentes",
+                "campos": faltando
+            }), 400
 
         # Conversão de datas
         data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
         data_nascimento = parse_date(aluno_data.get('data_nascimento'))
         proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
 
-        # Cria aluno
         aluno = Student(
             nome=aluno_data.get('nome'),
             curso=aluno_data.get('curso'),
@@ -66,18 +68,26 @@ def criar_pei():
         )
 
         db.session.add(aluno)
-        db.session.flush()  # Garante ID antes do commit final
+        db.session.flush()
 
-        # Salva o conteúdo do PEI como JSON string
-        pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
+        # Verifica se tem arquivo enviado (upload)
+        if 'laudo_medico_arquivo' in request.files:
+            file = request.files['laudo_medico_arquivo']
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                aluno.laudo_medico_arquivo = filename  # Salva o nome do arquivo no banco
+
+        # Salva o PEI como JSON
+        pei = PEI(
+            student_id=aluno.id,
+            conteudo=json.dumps(conteudo_data, ensure_ascii=False)
+        )
         db.session.add(pei)
 
         db.session.commit()
 
-        return jsonify({
-            "message": "✅ PEI criado com sucesso!",
-            "student_id": aluno.id
-        }), 201
+        return jsonify({"message": "✅ PEI criado com sucesso!", "student_id": aluno.id}), 201
 
     except Exception as e:
         db.session.rollback()
