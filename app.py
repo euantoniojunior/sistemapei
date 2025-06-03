@@ -14,7 +14,8 @@ app = Flask(
     template_folder='templates'
 )
 #PASTA UPLOAD DE LAUDOS
-UPLOAD_FOLDER = 'static/assets/laudos'
+UPLOAD_FOLDER = 'static/laudos'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Configurações gerais
