@@ -17,6 +17,7 @@
       padding: 10px;
       border-radius: 6px;
       border: 1px solid #ccc; 
+      font-size: 14px;
     }
     table {
       width: 100%;
@@ -33,6 +34,11 @@
     }
     tr:hover {
       background-color: #fafafa;
+    }
+    .no-results {
+      text-align: center;
+      color: #888;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -64,6 +70,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    <p id="msgNoResults" class="no-results"></p>
   </div>
 
   <script>
@@ -83,13 +90,15 @@
       const alunos = await res.json();
 
       const tbody = document.querySelector("#tabelaAlunos tbody");
+      const msgEl = document.getElementById("msgNoResults");
       tbody.innerHTML = "";
 
       if (!alunos.length) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>Nenhum aluno encontrado.</td></tr>";
+        msgEl.innerText = "Nenhum aluno encontrado com os critérios informados.";
         return;
       }
 
+      msgEl.innerText = "";
       alunos.forEach(a => {
         tbody.innerHTML += `
           <tr>
