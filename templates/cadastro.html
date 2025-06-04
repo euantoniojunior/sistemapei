@@ -9,7 +9,7 @@
   <style>
     body {
       font-family: 'Roboto', sans-serif;
-      background-color: #f4f7fa; 
+      background-color: #f4f7fa;  
       margin: 0;
       padding: 0;
     }
@@ -133,17 +133,14 @@
   </style>
 </head>
 <body>
-
 <div class="form-container">
   <h2>Plano Educacional Individualizado (PEI)</h2>
 
   <!-- Formulário -->
   <form id="peiForm">
-
     <!-- Dados do Aluno -->
     <label for="nome">Nome do Aluno:</label>
     <input type="text" name="nome" id="nome" required>
-
     <div class="grid-2">
       <input type="text" name="curso" placeholder="Curso Técnico" required>
       <input type="text" name="unidade" placeholder="Unidade SENAC" required>
@@ -151,12 +148,10 @@
       <label for="data_elaboracao">Data de Elaboração:</label>
       <input type="date" name="data_elaboracao" id="data_elaboracao" required>
     </div>
-
     <label for="responsavel">Responsável pela Elaboração:</label>
     <input type="text" name="responsavel" id="responsavel" required>
-
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-
+    
     <!-- Identificação do Aluno -->
     <label>Data de Nascimento:</label>
     <div class="grid-3">
@@ -164,8 +159,7 @@
       <input type="number" name="idade" placeholder="Idade (anos)">
       <input type="text" name="diagnostico_cid" placeholder="Diagnóstico (CID)">
       <input type="text" name="transtorno_identificado" placeholder="Transtorno identificado">
-
-      <!-- Laudo Médico + Upload lado a lado -->
+      
       <div style="display:flex; flex-direction: column; gap: 5px;">
         <label for="laudo_medico">Laudo Médico:</label>
         <select name="laudo_medico" id="laudo_medico">
@@ -174,13 +168,12 @@
           <option value="Não">Não</option>
         </select>
       </div>
-
       <div style="display:flex; flex-direction: column; gap: 5px;">
         <label for="laudo_medico_arquivo">Upload Laudo:</label>
         <input type="file" name="laudo_medico_arquivo" id="laudo_medico_arquivo" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt">
       </div>
     </div>
-
+    
     <label>Profissionais que acompanham o aluno (nome e dias):</label>
     <input type="text" name="psicologo" placeholder="Psicólogo (nome e dias)">
     <input type="text" name="psiquiatra" placeholder="Psiquiatra (nome e dias)">
@@ -236,7 +229,6 @@
     <!-- Acompanhamento -->
     <label>Observações gerais:</label>
     <textarea name="observacoes_gerais" rows="4" placeholder="Observações gerais..."></textarea>
-
     <div class="grid-2">
       <input type="date" name="proxima_avaliacao" placeholder="Data da próxima avaliação">
       <input type="text" name="responsavel_legal" placeholder="Responsável legal">
@@ -265,13 +257,238 @@
 </div>
 
 <script>
-  // Variáveis globais
   const form = document.getElementById('peiForm');
   const msgEl = document.getElementById('msg');
-
   let cadastroFinalizado = false;
 
-  // ========== EXPORTAR PDF - SEMPRE GLOBAL E FUNCIONAL ========== ✅
+  // Carregar dados se tiver ID na URL
+  window.onload = async function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+
+    if (studentId) {
+      try {
+        const res = await fetch(`/api/alunos?id=${studentId}`);
+        const aluno = (await res.json())[0];
+
+        if (!aluno) {
+          msgEl.style.color = 'red';
+          msgEl.innerText = "❌ Aluno não encontrado.";
+          return;
+        }
+
+        preencherFormulario(aluno);
+        bloquearCampos(true);
+        mostrarBotoesPosSalvar();
+
+        if (aluno.laudo_medico_arquivo) {
+          document.getElementById("laudo_medico").value = aluno.laudo_medico || '';
+        }
+
+        // Buscar conteúdo do PEI
+        const peiRes = await fetch(`/api/pei/${studentId}`);
+        const peiData = await peiRes.json();
+        if (peiData && peiData.conteudo) {
+          const conteudo = JSON.parse(peiData.conteudo);
+          document.querySelector("[name='objetivos_gerais']").value = conteudo.objetivos_gerais || '';
+          document.querySelector("[name='adaptaçoes_pedagogicas']").value = conteudo.adaptaçoes_pedagogicas || '';
+          document.querySelector("[name='intervencoes_complementares']").value = conteudo.intervencoes_complementares || '';
+          
+          if (conteudo.metas) {
+            document.querySelector("[name='meta_curto_prazo']").value = conteudo.metas.curto_prazo?.meta || '';
+            document.querySelector("[name='responsavel_curto']").value = conteudo.metas.curto_prazo?.responsavel || '';
+            document.querySelector("[name='avaliacao_curto']").value = conteudo.metas.curto_prazo?.avaliacao || '';
+
+            document.querySelector("[name='meta_medio_prazo']").value = conteudo.metas.medio_prazo?.meta || '';
+            document.querySelector("[name='responsavel_medio']").value = conteudo.metas.medio_prazo?.responsavel || '';
+            document.querySelector("[name='avaliacao_medio']").value = conteudo.metas.medio_prazo?.avaliacao || '';
+
+            document.querySelector("[name='meta_longo_prazo']").value = conteudo.metas.longo_prazo?.meta || '';
+            document.querySelector("[name='responsavel_longo']").value = conteudo.metas.longo_prazo?.responsavel || '';
+            document.querySelector("[name='avaliacao_longo']").value = conteudo.metas.longo_prazo?.avaliacao || '';
+          }
+        }
+
+        cadastroFinalizado = true;
+        document.getElementById("exportarPDF").disabled = false;
+
+      } catch (err) {
+        console.error("Erro ao carregar aluno:", err);
+        msgEl.style.color = 'red';
+        msgEl.innerText = "❌ Erro ao carregar os dados do aluno.";
+      }
+    }
+  };
+
+  // Função para preencher campos do formulário
+  function preencherFormulario(dados) {
+    document.getElementById("nome").value = dados.nome || '';
+    document.querySelector("[name='curso']").value = dados.curso || '';
+    document.querySelector("[name='unidade']").value = dados.unidade || '';
+    document.querySelector("[name='periodo']").value = dados.periodo || '';
+    document.querySelector("[name='data_elaboracao']").value = dados.data_elaboracao ? dados.data_elaboracao.split('T')[0] : '';
+    document.querySelector("[name='responsavel']").value = dados.responsavel || '';
+    document.querySelector("[name='data_nascimento']").value = dados.data_nascimento ? dados.data_nascimento.split('T')[0] : '';
+    document.querySelector("[name='idade']").value = dados.idade || '';
+    document.querySelector("[name='diagnostico_cid']").value = dados.diagnostico_cid || '';
+    document.querySelector("[name='transtorno_identificado']").value = dados.transtorno_identificado || '';
+    document.querySelector("[name='laudo_medico']").value = dados.laudo_medico || '';
+    document.querySelector("[name='psicologo']").value = dados.psicologo || '';
+    document.querySelector("[name='psiquiatra']").value = dados.psiquiatra || '';
+    document.querySelector("[name='psicopedagogo']").value = dados.psicopedagogo || '';
+    document.querySelector("[name='outros_profissionais']").value = dados.outros_profissionais || '';
+    document.querySelector("[name='perfil_aluno']").value = dados.perfil_aluno || '';
+    document.querySelector("[name='observacoes_gerais']").value = dados.observacoes_gerais || '';
+    document.querySelector("[name='proxima_avaliacao']").value = dados.proxima_avaliacao ? dados.proxima_avaliacao.split('T')[0] : '';
+    document.querySelector("[name='responsavel_legal']").value = dados.responsavel_legal || '';
+    document.querySelector("[name='orientador_responsavel']").value = dados.orientador_responsavel || '';
+    document.querySelector("[name='supervisor']").value = dados.supervisor || '';
+    document.querySelector("[name='gerente_unidade']").value = dados.gerente_unidade || '';
+  }
+
+  // Enviar dados do formulário
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const aluno = {
+      nome: form.nome.value.trim(),
+      curso: form.curso.value.trim(),
+      unidade: form.unidade.value.trim(),
+      periodo: form.periodo.value.trim(),
+      data_elaboracao: form.data_elaboracao.value,
+      responsavel: form.responsavel.value.trim(),
+      data_nascimento: form.data_nascimento.value,
+      idade: form.idade.value,
+      diagnostico_cid: form.diagnostico_cid.value,
+      transtorno_identificado: form.transtorno_identificado.value,
+      laudo_medico: form.laudo_medico.value,
+      psicologo: form.psicologo.value,
+      psiquiatra: form.psiquiatra.value,
+      psicopedagogo: form.psicopedagogo.value,
+      outros_profissionais: form.outros_profissionais.value,
+      perfil_aluno: form.perfil_aluno.value,
+      observacoes_gerais: form.observacoes_gerais.value,
+      proxima_avaliacao: form.proxima_avaliacao.value,
+      responsavel_legal: form.responsavel_legal.value,
+      orientador_responsavel: form.orientador_responsavel.value,
+      supervisor: form.supervisor.value,
+      gerente_unidade: form.gerente_unidade.value
+    };
+
+    const conteudo = {
+      objetivos_gerais: form.objetivos_gerais.value,
+      adaptaçoes_pedagogicas: form.adaptaçoes_pedagogicas.value,
+      intervencoes_complementares: form.intervencoes_complementares.value,
+      metas: {
+        curto_prazo: {
+          meta: form.meta_curto_prazo.value,
+          responsavel: form.responsavel_curto.value,
+          avaliacao: form.avaliacao_curto.value
+        },
+        medio_prazo: {
+          meta: form.meta_medio_prazo.value,
+          responsavel: form.responsavel_medio.value,
+          avaliacao: form.avaliacao_medio.value
+        },
+        longo_prazo: {
+          meta: form.meta_longo_prazo.value,
+          responsavel: form.responsavel_longo.value,
+          avaliacao: form.avaliacao_longo.value
+        }
+      }
+    };
+
+    // Validação de campos obrigatórios
+    const requiredFields = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel'];
+    const missing = requiredFields.filter(field => !aluno[field]);
+    if (missing.length > 0) {
+      msgEl.style.color = 'red';
+      msgEl.innerText = `⚠️ Campos obrigatórios ausentes: ${missing.join(', ')}`;
+      return;
+    }
+
+    // Enviar dados via API
+    try {
+      const formData = new FormData();
+      formData.append("aluno", JSON.stringify(aluno));
+      formData.append("conteudo", JSON.stringify(conteudo));
+
+      if (form.laudo_medico_arquivo.files.length > 0) {
+        formData.append("laudo_medico_arquivo", form.laudo_medico_arquivo.files[0]);
+      }
+
+      const url = aluno.id ? `/api/pei/${aluno.id}` : '/api/pei';
+      const method = aluno.id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        msgEl.style.color = 'green';
+        msgEl.innerText = '✅ PEI salvo com sucesso!';
+        bloquearCampos(true);
+        ocultarBotoesIniciais();
+        mostrarBotoesPosSalvar();
+      } else {
+        msgEl.style.color = 'red';
+        msgEl.innerText = '❌ Erro ao salvar o PEI: ' + (data.error || 'Verifique os dados.');
+      }
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+      msgEl.style.color = 'red';
+      msgEl.innerText = '❌ Falha na comunicação com o servidor.';
+    }
+  });
+
+  function bloquearCampos(bloquear = true) {
+    Array.from(form.elements).forEach(el => {
+      if (el.type !== 'button') el.readOnly = bloquear;
+    });
+  }
+
+  function limparCampos() {
+    form.reset();
+    msgEl.innerText = '';
+    ocultarBotoesPosSalvar();
+    mostrarBotoesIniciais();
+    document.getElementById("exportarPDF").disabled = true;
+    cadastroFinalizado = false;
+  }
+
+  function editarCampos() {
+    bloquearCampos(false);
+    ocultarBotoesPosSalvar();
+    mostrarBotoesIniciais();
+    msgEl.innerText = 'Você está editando o cadastro.';
+    msgEl.className = 'green';
+  }
+
+  function finalizarCadastro() {
+    cadastroFinalizado = true;
+    document.getElementById("exportarPDF").disabled = false;
+    alert("✅ Cadastro finalizado. Agora você pode exportar como PDF.");
+  }
+
+  function mostrarBotoesPosSalvar() {
+    document.getElementById('botoes-pos-salvar').style.display = 'flex';
+  }
+
+  function ocultarBotoesPosSalvar() {
+    document.getElementById('botoes-pos-salvar').style.display = 'none';
+  }
+
+  function mostrarBotoesIniciais() {
+    document.getElementById('botoes-iniciais').style.display = 'flex';
+  }
+
+  function ocultarBotoesIniciais() {
+    document.getElementById('botoes-iniciais').style.display = 'none';
+  }
+
   async function exportarPDF() {
     if (!cadastroFinalizado) {
       alert("⚠️ Finalize o cadastro antes de exportar.");
@@ -322,16 +539,13 @@
         body: JSON.stringify(aluno)
       });
 
-      if (!res.ok) {
-        alert("❌ Erro ao gerar PDF.");
-        return;
-      }
+      if (!res.ok) throw new Error("Erro no PDF");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `PEI_${aluno.nome || 'aluno'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `PEI_${aluno.nome}_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -339,129 +553,6 @@
       alert("❌ Falha ao exportar PDF.");
     }
   }
-
-  // Função chamada ao submeter o formulário
-  if (form) {
-    form.addEventListener("submit", async function(e) {
-      e.preventDefault();
-
-      const aluno = {
-        nome: form.nome.value.trim(),
-        curso: form.curso.value.trim(),
-        unidade: form.unidade.value.trim(),
-        periodo: form.periodo.value.trim(),
-        data_elaboracao: form.data_elaboracao.value,
-        responsavel: form.responsavel.value.trim(),
-        data_nascimento: form.data_nascimento.value,
-        idade: form.idade.value,
-        diagnostico_cid: form.diagnostico_cid.value,
-        transtorno_identificado: form.transtorno_identificado.value,
-        laudo_medico: form.laudo_medico.value,
-        psicologo: form.psicologo.value,
-        psiquiatra: form.psiquiatra.value,
-        psicopedagogo: form.psicopedagogo.value,
-        outros_profissionais: form.outros_profissionais.value,
-        perfil_aluno: form.perfil_aluno.value,
-        observacoes_gerais: form.observacoes_gerais.value,
-        proxima_avaliacao: form.proxima_avaliacao.value,
-        responsavel_legal: form.responsavel_legal.value,
-        orientador_responsavel: form.orientador_responsavel.value,
-        supervisor: form.supervisor.value,
-        gerente_unidade: form.gerente_unidade.value
-      };
-
-      const conteudo = {
-        objetivos_gerais: form.objetivos_gerais.value,
-        adaptaçoes_pedagogicas: form.adaptaçoes_pedagogicas.value,
-        intervencoes_complementares: form.intervencoes_complementares.value,
-        metas: {
-          curto_prazo: {
-            meta: form.meta_curto_prazo.value,
-            responsavel: form.responsavel_curto.value,
-            avaliacao: form.avaliacao_curto.value
-          },
-          medio_prazo: {
-            meta: form.meta_medio_prazo.value,
-            responsavel: form.responsavel_medio.value,
-            avaliacao: form.avaliacao_medio.value
-          },
-          longo_prazo: {
-            meta: form.meta_longo_prazo.value,
-            responsavel: form.responsavel_longo.value,
-            avaliacao: form.avaliacao_longo.value
-          }
-        }
-      };
-
-      // Valida campos obrigatórios
-      const requiredFields = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel'];
-      const missing = requiredFields.filter(field => !aluno[field]);
-      if (missing.length > 0) {
-        msgEl.style.color = 'red';
-        msgEl.innerText = `⚠️ Campos obrigatórios ausentes: ${missing.join(', ')}`;
-        return;
-      }
-
-      // Envia os dados para a API
-      try {
-        const res = await fetch('/api/pei', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aluno, conteudo })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          msgEl.style.color = 'green';
-          msgEl.innerText = '✅ PEI salvo com sucesso!';
-          bloquearCampos(true);
-
-          document.getElementById('botoes-iniciais').style.display = 'none';
-          document.getElementById('botoes-pos-salvar').style.display = 'flex';
-        } else {
-          msgEl.style.color = 'red';
-          msgEl.innerText = '❌ Erro ao salvar o PEI: ' + (data.error || 'Verifique os dados.');
-        }
-      } catch (err) {
-        console.error("Erro ao salvar:", err);
-        msgEl.style.color = 'red';
-        msgEl.innerText = '❌ Falha na comunicação com o servidor.';
-      }
-    });
-  }
-
-  // ========== FUNÇÕES AUXILIARES ==========
-
-  function bloquearCampos(bloquear = true) {
-    Array.from(form.elements).forEach(el => {
-      if (el.type !== 'button') el.readOnly = bloquear;
-    });
-  }
-
-  function limparCampos() {
-    form.reset();
-    msgEl.innerText = '';
-    document.getElementById('botoes-iniciais').style.display = 'flex';
-    document.getElementById('botoes-pos-salvar').style.display = 'none';
-    document.getElementById('exportarPDF').disabled = true;
-    cadastroFinalizado = false;
-  }
-
-  function editarCampos() {
-    bloquearCampos(false);
-    document.getElementById('botoes-iniciais').style.display = 'flex';
-    document.getElementById('botoes-pos-salvar').style.display = 'none';
-    msgEl.innerText = 'Você está editando o cadastro.';
-    msgEl.className = 'green';
-  }
-
-  function finalizarCadastro() {
-    cadastroFinalizado = true;
-    document.getElementById('exportarPDF').disabled = false;
-    alert("✅ Cadastro finalizado. Agora você pode exportar como PDF.");
-  }
 </script>
-
 </body>
 </html>
