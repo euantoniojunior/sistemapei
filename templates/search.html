@@ -15,7 +15,7 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C; 
+      color: #003D7C;  
       text-align: center;
       margin-bottom: 20px;
     }
@@ -35,6 +35,9 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    button:hover {
+      background-color: #e67e22;
+    }
     .resultados {
       margin-top: 30px;
     }
@@ -46,10 +49,12 @@
       border-radius: 8px;
       margin-top: 10px;
       cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .card-historico:hover {
       background-color: #f9f9f9;
       transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     #msg {
       margin-top: 10px;
@@ -79,9 +84,11 @@
       const studentName = document.getElementById('studentName').value.trim();
       const resultadosDiv = document.getElementById('resultados');
       const msgEl = document.getElementById('msg');
+
       if (!studentName) {
         msgEl.innerText = "Por favor, digite um nome válido.";
         msgEl.className = 'red';
+        resultadosDiv.innerHTML = '';
         return;
       }
 
