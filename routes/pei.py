@@ -172,6 +172,34 @@ def get_historico(pei_id):
     } for h in historico]), 200
 
 
+# ✅ Rota: Gerenciamento de Registros no Banco de dados #
+
+@pei_bp.route('/api/alunos/all', methods=['GET'])
+def listar_todos_alunos():
+    alunos = Student.query.all()
+    return jsonify([{ 
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'unidade': a.unidade,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None
+    } for a in alunos])
+
+@pei_bp.route('/api/alunos/<int:id>', methods=['DELETE'])
+def deletar_aluno(id):
+    aluno = Student.query.get(id)
+    if not aluno:
+        return jsonify({'error': 'Aluno não encontrado'}), 404
+    db.session.delete(aluno)
+    db.session.commit()
+    return jsonify({'message': f'✅ Aluno {id} excluído com sucesso.'})
+
+@pei_bp.route('/api/alunos', methods=['DELETE'])
+def deletar_todos_alunos():
+    Student.query.delete()
+    db.session.commit()
+    return jsonify({'message': '✅ Todos os alunos foram excluídos.'})
+
 # ✅ Rota: Gerar PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
