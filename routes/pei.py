@@ -4,6 +4,11 @@ from database.connection import db
 import pdfkit
 import json
 from datetime import datetime
+from werkzeug.utils import secure_filename
+import os
+
+# Garantir que a pasta de uploads esteja definida
+from app import app  # Importa a instância do app para acessar UPLOAD_FOLDER
 
 pei_bp = Blueprint('pei', __name__)
 
@@ -17,16 +22,13 @@ def parse_date(date_str):
         return None
 
 
-# ✅ Rota: Salvar novo PEI
+# ✅ Rota: Salvar novo PEI (com suporte a upload de laudo médico)
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        data = request.get_json()
-        if not data or 'aluno' not in data or 'conteudo' not in data:
-            return jsonify({"error": "Dados incompletos", "detalhe": "Verifique se aluno e conteúdo foram enviados"}), 400
-
-        aluno_data = data['aluno']
-        conteudo_data = data['conteudo']
+        # Usar request.form para campos normais e request.files para uploads
+        aluno_data = json.loads(request.form.get('aluno'))
+        conteudo_data = json.loads(request.form.get('conteudo'))
 
         # Campos obrigatórios
         campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
@@ -66,11 +68,10 @@ def criar_pei():
             supervisor=aluno_data.get('supervisor'),
             gerente_unidade=aluno_data.get('gerente_unidade')
         )
-
         db.session.add(aluno)
         db.session.flush()
 
-        # Verifica se tem arquivo enviado (upload)
+        # Upload do laudo médico
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
@@ -84,7 +85,6 @@ def criar_pei():
             conteudo=json.dumps(conteudo_data, ensure_ascii=False)
         )
         db.session.add(pei)
-
         db.session.commit()
 
         return jsonify({"message": "✅ PEI criado com sucesso!", "student_id": aluno.id}), 201
@@ -144,7 +144,6 @@ def gerar_pdf():
         return jsonify({"error": "Dados inválidos para exportação"}), 400
 
     logo_url = request.url_root + 'static/assets/senac-logo.png'
-
     template = """
     <html>
       <head>
@@ -205,7 +204,6 @@ def gerar_pdf():
           <img src="{{ logo_url }}" alt="SENAC Logo">
           <h1>Plano Educacional Individualizado (PEI)</h1>
         </div>
-
         <p><strong>Nome do Aluno:</strong> {{ nome }}</p>
         <div style="display:flex; gap: 20px;">
           <p><strong>Curso Técnico:</strong> {{ curso }}</p>
@@ -216,7 +214,6 @@ def gerar_pdf():
           <p><strong>Data de Elaboração:</strong> {{ data_elaboracao }}</p>
           <p><strong>Responsável pela Elaboração:</strong> {{ responsavel }}</p>
         </div>
-
         <h2>1. Identificação do Aluno</h2>
         <div style="display:flex; gap: 20px;">
           <p><strong>Data de Nascimento:</strong> {{ data_nascimento }}</p>
@@ -231,19 +228,14 @@ def gerar_pdf():
         <p><strong>Psiquiatra:</strong> {{ psiquiatra }}</p>
         <p><strong>Psicopedagogo:</strong> {{ psicopedagogo }}</p>
         <p><strong>Outros Profissionais:</strong> {{ outros_profissionais }}</p>
-
         <h2>2. Perfil do Aluno</h2>
         <p>{{ perfil_aluno or 'N/A' }}</p>
-
         <h2>3. Objetivos Gerais do PEI</h2>
         <p>{{ objetivos_gerais or 'N/A' }}</p>
-
         <h2>4. Adaptações e Estratégias Pedagógicas</h2>
         <p>{{ adaptaçoes_pedagogicas or 'N/A' }}</p>
-
         <h2>5. Intervenções Complementares</h2>
         <p>{{ intervencoes_complementares or 'N/A' }}</p>
-
         <h2>6. Metas Individuais</h2>
         <table>
           <tr><th>Período</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
@@ -251,11 +243,9 @@ def gerar_pdf():
           <tr><td>Médio prazo</td><td>{{ meta_medio_prazo }}</td><td>{{ responsavel_medio }}</td><td>{{ avaliacao_medio }}</td></tr>
           <tr><td>Longo prazo</td><td>{{ meta_longo_prazo }}</td><td>{{ responsavel_longo }}</td><td>{{ avaliacao_longo }}</td></tr>
         </table>
-
         <h2>7. Acompanhamento e Revisão do PEI</h2>
         <p><strong>Observações gerais:</strong> {{ observacoes_gerais or 'N/A' }}</p>
         <p><strong>Data da próxima avaliação:</strong> {{ proxima_avaliacao or 'N/A' }}</p>
-
         <div class="assinatura">
           <div>
             Responsável legal<br>
@@ -283,7 +273,6 @@ def gerar_pdf():
     """
 
     rendered = render_template_string(template, logo_url=logo_url, **dados)
-
     options = {
         'encoding': 'utf-8',
         'enable-local-file-access': '',
