@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, render_template_string, session, current_app
-from models.models import Student, PEI, PEIHistory
+from flask import Blueprint, request, jsonify, render_template_string
+from models.models import Student, PEI
 from database.connection import db
 import pdfkit
 import json
@@ -8,7 +8,6 @@ from werkzeug.utils import secure_filename
 import os
 
 pei_bp = Blueprint('pei', __name__)
-
 
 def parse_date(date_str):
     """Converte string de data para objeto date"""
@@ -20,15 +19,20 @@ def parse_date(date_str):
         return None
 
 
-# ✅ Rota: Salvar novo PEI
+# ✅ Rota principal: Salvar ou editar um PEI
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        # Pega os dados do formulário
-        aluno_data = json.loads(request.form.get('aluno'))
-        conteudo_data = json.loads(request.form.get('conteudo'))
+        # Verifica o tipo de conteúdo
+        if request.content_type.startswith('application/json'):
+            data = request.get_json()
+            aluno_data = data.get('aluno')
+            conteudo_data = data.get('conteudo')
+        else:
+            aluno_data = json.loads(request.form.get('aluno'))
+            conteudo_data = json.loads(request.form.get('conteudo'))
 
-        # Campos obrigatórios
+        # Valida campos obrigatórios
         campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
         faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
         if faltando:
@@ -69,13 +73,12 @@ def criar_pei():
         db.session.add(aluno)
         db.session.flush()
 
-        # Upload do laudo médico
+        # Upload do laudo médico (opcional)
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
                 filename = secure_filename(file.filename)
-                upload_folder = current_app.config['UPLOAD_FOLDER']  # ✅ Usa current_app
-                file.save(os.path.join(upload_folder, filename))
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 aluno.laudo_medico_arquivo = filename
 
         # Salva o conteúdo do PEI como JSON
@@ -97,7 +100,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por nome
+# ✅ Nova rota: Buscar aluno por nome (usada na search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -121,6 +124,7 @@ def buscar_alunos():
         'diagnostico_cid': a.diagnostico_cid,
         'transtorno_identificado': a.transtorno_identificado,
         'laudo_medico': a.laudo_medico,
+        'laudo_medico_arquivo': a.laudo_medico_arquivo,
         'psicologo': a.psicologo,
         'psiquiatra': a.psiquiatra,
         'psicopedagogo': a.psicopedagogo,
@@ -135,6 +139,20 @@ def buscar_alunos():
     } for a in alunos])
 
 
+# ✅ Rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def buscar_aluno_por_id():
+    student_id = request.args.get('id')
+    if not student_id or not student_id.isdigit():
+        return jsonify({"error": "ID do aluno inválido"}), 400
+
+    aluno = Student.query.get(int(student_id))
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    return jsonify(aluno.to_dict()), 200
+
+
 # ✅ Rota: Gerar PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
@@ -143,6 +161,7 @@ def gerar_pdf():
         return jsonify({"error": "Dados inválidos para exportação"}), 400
 
     logo_url = request.url_root + 'static/assets/senac-logo.png'
+
     template = """
     <html>
       <head>
@@ -219,22 +238,25 @@ def gerar_pdf():
           <p><strong>Idade:</strong> {{ idade }} anos</p>
           <p><strong>Diagnóstico (CID):</strong> {{ diagnostico_cid }}</p>
         </div>
-        <div style="display:flex; gap: 20px;">
-          <p><strong>Transtorno identificado:</strong> {{ transtorno_identificado }}</p>
-          <p><strong>Laudo Médico / Profissional de Saúde:</strong> {{ laudo_medico }}</p>
-        </div>
+        <p><strong>Transtorno identificado:</strong> {{ transtorno_identificado }}</p>
+        <p><strong>Laudo Médico:</strong> {{ laudo_medico }}</p>
         <p><strong>Psicólogo:</strong> {{ psicologo }}</p>
         <p><strong>Psiquiatra:</strong> {{ psiquiatra }}</p>
         <p><strong>Psicopedagogo:</strong> {{ psicopedagogo }}</p>
         <p><strong>Outros Profissionais:</strong> {{ outros_profissionais }}</p>
+
         <h2>2. Perfil do Aluno</h2>
         <p>{{ perfil_aluno or 'N/A' }}</p>
+
         <h2>3. Objetivos Gerais do PEI</h2>
         <p>{{ objetivos_gerais or 'N/A' }}</p>
+
         <h2>4. Adaptações e Estratégias Pedagógicas</h2>
         <p>{{ adaptaçoes_pedagogicas or 'N/A' }}</p>
+
         <h2>5. Intervenções Complementares</h2>
         <p>{{ intervencoes_complementares or 'N/A' }}</p>
+
         <h2>6. Metas Individuais</h2>
         <table>
           <tr><th>Período</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
@@ -242,9 +264,11 @@ def gerar_pdf():
           <tr><td>Médio prazo</td><td>{{ meta_medio_prazo }}</td><td>{{ responsavel_medio }}</td><td>{{ avaliacao_medio }}</td></tr>
           <tr><td>Longo prazo</td><td>{{ meta_longo_prazo }}</td><td>{{ responsavel_longo }}</td><td>{{ avaliacao_longo }}</td></tr>
         </table>
+
         <h2>7. Acompanhamento e Revisão do PEI</h2>
         <p><strong>Observações gerais:</strong> {{ observacoes_gerais or 'N/A' }}</p>
         <p><strong>Data da próxima avaliação:</strong> {{ proxima_avaliacao or 'N/A' }}</p>
+
         <div class="assinatura">
           <div>
             Responsável legal<br>
@@ -275,7 +299,7 @@ def gerar_pdf():
     options = {
         'encoding': 'utf-8',
         'enable-local-file-access': '',
-        'no-stop-slow-scripts': None
+        'no-stop-slow-scripts': ''
     }
 
     try:
