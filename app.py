@@ -55,6 +55,11 @@ def login_page():
         return redirect(url_for('dashboard_page'))
     return render_template('login.html')
 
+@app.route('/preview')
+@login_required
+def preview_page():
+    return render_template('preview.html')
+
 @app.route('/dashboard')
 @login_required
 def dashboard_page():
