@@ -141,24 +141,28 @@
     <!-- Dados do Aluno -->
     <label for="nome">Nome do Aluno:</label>
     <input type="text" name="nome" id="nome" required>
+
     <div class="grid-2">
-      <input type="text" name="curso" placeholder="Curso Técnico" required>
-      <input type="text" name="unidade" placeholder="Unidade SENAC" required>
-      <input type="text" name="periodo" placeholder="Período Letivo" required>
+      <input type="text" name="curso" id="curso" placeholder="Curso Técnico" required>
+      <input type="text" name="unidade" id="unidade" placeholder="Unidade SENAC" required>
+      <input type="text" name="periodo" id="periodo" placeholder="Período Letivo" required>
       <label for="data_elaboracao">Data de Elaboração:</label>
       <input type="date" name="data_elaboracao" id="data_elaboracao" required>
     </div>
+
     <label for="responsavel">Responsável pela Elaboração:</label>
     <input type="text" name="responsavel" id="responsavel" required>
+
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
 
     <!-- Identificação do Aluno -->
     <label>Data de Nascimento:</label>
     <div class="grid-3">
       <input type="date" name="data_nascimento" id="data_nascimento">
-      <input type="number" name="idade" placeholder="Idade (anos)">
-      <input type="text" name="diagnostico_cid" placeholder="Diagnóstico (CID)">
-      <input type="text" name="transtorno_identificado" placeholder="Transtorno identificado">
+      <input type="number" name="idade" id="idade" placeholder="Idade (anos)">
+      <input type="text" name="diagnostico_cid" id="diagnostico_cid" placeholder="Diagnóstico (CID)">
+      <input type="text" name="transtorno_identificado" id="transtorno_identificado" placeholder="Transtorno identificado">
+
       <div style="display:flex; flex-direction: column; gap: 5px;">
         <label for="laudo_medico">Laudo Médico:</label>
         <select name="laudo_medico" id="laudo_medico">
@@ -167,16 +171,18 @@
           <option value="Não">Não</option>
         </select>
       </div>
+
       <div style="display:flex; flex-direction: column; gap: 5px;">
         <label for="laudo_medico_arquivo">Upload Laudo:</label>
         <input type="file" name="laudo_medico_arquivo" id="laudo_medico_arquivo" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt">
       </div>
     </div>
+
     <label>Profissionais que acompanham o aluno (nome e dias):</label>
-    <input type="text" name="psicologo" placeholder="Psicólogo (nome e dias)">
-    <input type="text" name="psiquiatra" placeholder="Psiquiatra (nome e dias)">
-    <input type="text" name="psicopedagogo" placeholder="Psicopedagogo (nome e dias)">
-    <input type="text" name="outros_profissionais" placeholder="Outros profissionais">
+    <input type="text" name="psicologo" id="psicologo" placeholder="Psicólogo (nome e dias)">
+    <input type="text" name="psiquiatra" id="psiquiatra" placeholder="Psiquiatra (nome e dias)">
+    <input type="text" name="psicopedagogo" id="psicopedagogo" placeholder="Psicopedagogo (nome e dias)">
+    <input type="text" name="outros_profissionais" id="outros_profissionais" placeholder="Outros profissionais">
 
     <!-- Perfil do Aluno -->
     <label>Perfil do Aluno</label>
@@ -227,6 +233,7 @@
     <!-- Acompanhamento -->
     <label>Observações gerais:</label>
     <textarea name="observacoes_gerais" id="observacoes_gerais" rows="4" placeholder="Observações gerais..."></textarea>
+
     <div class="grid-2">
       <input type="date" name="proxima_avaliacao" id="proxima_avaliacao" placeholder="Data da próxima avaliação">
       <input type="text" name="responsavel_legal" id="responsavel_legal" placeholder="Responsável legal">
@@ -255,25 +262,22 @@
 </div>
 
 <script>
-  // Variáveis globais
-  const form = document.getElementById('peiForm');
-  const msgEl = document.getElementById('msg');
-  let cadastroFinalizado = false;
-
-  // ========== EXPORTAR PDF - NO GLOBAL SCOPE ==========
+  // Garantindo acesso global à função exportarPDF
   window.exportarPDF = async function () {
+    const cadastroFinalizado = document.getElementById("exportarPDF").disabled === false;
+
     if (!cadastroFinalizado) {
       alert("⚠️ Finalize o cadastro antes de exportar.");
       return;
     }
 
     const aluno = {
-      nome: document.getElementById("nome").value,
-      curso: document.getElementById("curso").value,
-      unidade: document.getElementById("unidade").value,
-      periodo: document.getElementById("periodo").value,
+      nome: document.getElementById("nome").value.trim(),
+      curso: document.getElementById("curso").value.trim(),
+      unidade: document.getElementById("unidade").value.trim(),
+      periodo: document.getElementById("periodo").value.trim(),
       data_elaboracao: document.getElementById("data_elaboracao").value,
-      responsavel: document.getElementById("responsavel").value,
+      responsavel: document.getElementById("responsavel").value.trim(),
       data_nascimento: document.getElementById("data_nascimento").value,
       idade: document.getElementById("idade").value,
       diagnostico_cid: document.getElementById("diagnostico_cid").value,
@@ -328,10 +332,13 @@
   };
 </script>
 
-<!-- Restante das funções fora do script acima -->
+<!-- Script principal com validações -->
 <script>
-  // Função chamada ao submeter o formulário
-  form.addEventListener("submit", async function(e) {
+  const form = document.getElementById("peiForm");
+  const msgEl = document.getElementById("msg");
+  let cadastroFinalizado = false;
+
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const aluno = {
@@ -406,24 +413,23 @@
         mostrarBotoesPosSalvar();
       } else {
         msgEl.style.color = "red";
-        msgEl.innerText = "❌ Erro ao salvar: " + (data.error || "Verifique os campos");
+        msgEl.innerText = "❌ Erro ao salvar: " + (data.error || "Verifique os dados.");
       }
     } catch (err) {
-      console.error("Erro ao enviar:", err);
+      console.error("Erro ao salvar:", err);
       msgEl.style.color = "red";
       msgEl.innerText = "❌ Erro de comunicação com o servidor.";
     }
   });
 
   function bloquearCampos(bloquear = true) {
-    Array.from(form.elements).forEach(el => {
-      if (el.type !== 'button') el.readOnly = bloquear;
-    });
+    const inputs = document.querySelectorAll("input, select, textarea");
+    inputs.forEach(el => el.readOnly = bloquear);
   }
 
   function limparCampos() {
-    form.reset();
-    msgEl.innerText = '';
+    document.getElementById("peiForm").reset();
+    msgEl.innerText = "";
     ocultarBotoesPosSalvar();
     mostrarBotoesIniciais();
     document.getElementById("exportarPDF").disabled = true;
