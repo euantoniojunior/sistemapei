@@ -9,7 +9,7 @@
   <style>
     body {
       font-family: 'Roboto', sans-serif;
-      background-color: #f4f7fa;  
+      background-color: #f4f7fa; 
       margin: 0;
       padding: 0;
     }
@@ -213,10 +213,8 @@
     <!-- Acompanhamento -->
     <label>Observações gerais:</label>
     <textarea name="observacoes_gerais" id="observacoes_gerais" rows="4" placeholder="Observações gerais..."></textarea>
-
-    <label for="proxima_avaliacao">Próxima Avaliação</label>
     <div class="grid-2">
-      <input type="date" name="proxima_avaliacao" id="proxima_avaliacao">
+      <input type="date" name="proxima_avaliacao" id="proxima_avaliacao" placeholder="Data da próxima avaliação">
       <input type="text" name="responsavel_legal" id="responsavel_legal" placeholder="Responsável legal">
       <input type="text" name="orientador_responsavel" id="orientador_responsavel" placeholder="Orientador responsável">
       <input type="text" name="supervisor" id="supervisor" placeholder="Supervisor">
@@ -242,13 +240,15 @@
 </div>
 
 <script>
-  // Garantindo que o formulário esteja disponível
-  const form = document.getElementById("peiForm");
-  const msgEl = document.getElementById("msg");
+  // Variáveis globais
+  const form = document.getElementById('peiForm');
+  const msgEl = document.getElementById('msg');
 
-  if (!form) {
-    console.error("❌ Formulário não encontrado!");
-  } else {
+  let alunoData = {};
+  let conteudoData = {};
+
+  // Função chamada ao submeter o formulário
+  if (form) {
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
 
@@ -259,32 +259,18 @@
       const data_elaboracao = document.getElementById("data_elaboracao");
       const responsavel = document.getElementById("responsavel");
 
-      // Verifica se todos os campos obrigatórios estão preenchidos
-      const requiredFields = [
-        { el: nome, name: "Nome do Aluno" },
-        { el: curso, name: "Curso Técnico" },
-        { el: unidade, name: "Unidade SENAC" },
-        { el: periodo, name: "Período Letivo" },
-        { el: data_elaboracao, name: "Data de Elaboração" },
-        { el: responsavel, name: "Responsável pela Elaboração" }
-      ];
+      // Valida campos obrigatórios
+      const requiredFields = [nome, curso, unidade, periodo, data_elaboracao, responsavel];
+      const missing = requiredFields.filter(field => !field || !field.value.trim());
 
-      let missingField = false;
-
-      requiredFields.forEach(({ el, name }) => {
-        if (!el || !el.value.trim()) {
-          console.warn(`Campo ausente: ${name}`);
-          missingField = true;
-        }
-      });
-
-      if (missingField) {
+      if (missing.length > 0) {
         msgEl.style.color = "red";
         msgEl.innerText = "⚠️ Campos obrigatórios ausentes.";
         return;
       }
 
-      const aluno = {
+      // Coleta dados do aluno
+      alunoData = {
         nome: nome.value.trim(),
         curso: curso.value.trim(),
         unidade: unidade.value.trim(),
@@ -309,46 +295,38 @@
         gerente_unidade: document.getElementById("gerente_unidade")?.value || ""
       };
 
-      const conteudo = {
-        objetivos_gerais: document.getElementById("objetivos_gerais")?.value || "",
-        adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas")?.value || "",
-        intervencoes_complementares: document.getElementById("intervencoes_complementares")?.value || "",
+      // Coleta conteúdo do PEI
+      conteudoData = {
+        objetivos_gerais: document.getElementById("objetivos_gerais").value,
+        adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
+        intervencoes_complementares: document.getElementById("intervencoes_complementares").value,
         metas: {
           curto_prazo: {
-            meta: document.getElementById("meta_curto_prazo")?.value || "",
-            responsavel: document.getElementById("responsavel_curto")?.value || "",
-            avaliacao: document.getElementById("avaliacao_curto")?.value || ""
+            meta: document.getElementById("meta_curto_prazo").value,
+            responsavel: document.getElementById("responsavel_curto").value,
+            avaliacao: document.getElementById("avaliacao_curto").value
           },
           medio_prazo: {
-            meta: document.getElementById("meta_medio_prazo")?.value || "",
-            responsavel: document.getElementById("responsavel_medio")?.value || "",
-            avaliacao: document.getElementById("avaliacao_medio")?.value || ""
+            meta: document.getElementById("meta_medio_prazo").value,
+            responsavel: document.getElementById("responsavel_medio").value,
+            avaliacao: document.getElementById("avaliacao_medio").value
           },
           longo_prazo: {
-            meta: document.getElementById("meta_longo_prazo")?.value || "",
-            responsavel: document.getElementById("responsavel_longo")?.value || "",
-            avaliacao: document.getElementById("avaliacao_longo")?.value || ""
+            meta: document.getElementById("meta_longo_prazo").value,
+            responsavel: document.getElementById("responsavel_longo").value,
+            avaliacao: document.getElementById("avaliacao_longo").value
           }
         }
       };
 
-      const formData = new FormData();
-      formData.append("aluno", JSON.stringify(aluno));
-      formData.append("conteudo", JSON.stringify(conteudo));
-
-      const laudoInput = document.getElementById("laudo_medico_arquivo");
-      if (laudoInput && laudoInput.files.length > 0) {
-        formData.append("laudo_medico_arquivo", laudoInput.files[0]);
-      }
-
       try {
         const res = await fetch("/api/pei", {
           method: "POST",
-          body: formData
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
         });
 
         const data = await res.json();
-
         if (res.ok) {
           msgEl.style.color = "green";
           msgEl.innerText = "✅ PEI salvo com sucesso!";
@@ -367,17 +345,33 @@
     });
   }
 
+  // Função chamada ao clicar em Finalizar Cadastro
+  function finalizarCadastro() {
+    if (!alunoData.nome) {
+      alert("⚠️ Salve o cadastro antes de finalizar.");
+      return;
+    }
+
+    // Armazena os dados no localStorage
+    localStorage.setItem("peiPreview", JSON.stringify(alunoData));
+    localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
+
+    // Abre nova aba com preview
+    window.open('/preview', '_blank');
+    alert("✅ Cadastro finalizado. Visualize-o na nova aba.");
+  }
+
   function bloquearCampos(bloquear = true) {
-    const inputs = document.querySelectorAll("input, select, textarea");
-    inputs.forEach(el => {
+    Array.from(form.elements).forEach(el => {
       if (el.type !== 'button') el.readOnly = bloquear;
     });
   }
 
   function limparCampos() {
-    const form = document.getElementById("peiForm");
-    if (form) form.reset();
+    form.reset();
     msgEl.innerText = "";
+    alunoData = {};
+    conteudoData = {};
     mostrarBotoesIniciais();
     ocultarBotoesPosSalvar();
   }
@@ -390,68 +384,20 @@
     msgEl.innerText = "Você está editando o cadastro.";
   }
 
-  function finalizarCadastro() {
-    const aluno = {
-      nome: document.getElementById("nome").value,
-      curso: document.getElementById("curso").value,
-      unidade: document.getElementById("unidade").value,
-      periodo: document.getElementById("periodo").value,
-      data_elaboracao: document.getElementById("data_elaboracao").value,
-      responsavel: document.getElementById("responsavel").value,
-      data_nascimento: document.getElementById("data_nascimento")?.value || "",
-      idade: document.getElementById("idade")?.value || "",
-      diagnostico_cid: document.getElementById("diagnostico_cid")?.value || "",
-      transtorno_identificado: document.getElementById("transtorno_identificado")?.value || "",
-      laudo_medico: document.getElementById("laudo_medico")?.value || "",
-      psicologo: document.getElementById("psicologo")?.value || "",
-      psiquiatra: document.getElementById("psiquiatra")?.value || "",
-      psicopedagogo: document.getElementById("psicopedagogo")?.value || "",
-      outros_profissionais: document.getElementById("outros_profissionais")?.value || "",
-      perfil_aluno: document.getElementById("perfil_aluno")?.value || "",
-      observacoes_gerais: document.getElementById("observacoes_gerais")?.value || "",
-      proxima_avaliacao: document.getElementById("proxima_avaliacao")?.value || "",
-      responsavel_legal: document.getElementById("responsavel_legal")?.value || "",
-      orientador_responsavel: document.getElementById("orientador_responsavel")?.value || "",
-      supervisor: document.getElementById("supervisor")?.value || "",
-      gerente_unidade: document.getElementById("gerente_unidade")?.value || "",
-      meta_curto_prazo: document.getElementById("meta_curto_prazo")?.value || "",
-      responsavel_curto: document.getElementById("responsavel_curto")?.value || "",
-      avaliacao_curto: document.getElementById("avaliacao_curto")?.value || "",
-      meta_medio_prazo: document.getElementById("meta_medio_prazo")?.value || "",
-      responsavel_medio: document.getElementById("responsavel_medio")?.value || "",
-      avaliacao_medio: document.getElementById("avaliacao_medio")?.value || "",
-      meta_longo_prazo: document.getElementById("meta_longo_prazo")?.value || "",
-      responsavel_longo: document.getElementById("responsavel_longo")?.value || "",
-      avaliacao_longo: document.getElementById("avaliacao_longo")?.value || "",
-      adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas")?.value || "",
-      intervencoes_complementares: document.getElementById("intervencoes_complementares")?.value || "",
-      objetivos_gerais: document.getElementById("objetivos_gerais")?.value || ""
-    };
-
-    localStorage.setItem("peiPreview", JSON.stringify(aluno));
-    localStorage.setItem("peiConteudo", JSON.stringify(conteudo));
-    window.open('/preview', '_blank');
-    alert("✅ Cadastro finalizado. Visualize-o na nova aba.");
-  }
-
   function mostrarBotoesIniciais() {
-    const botoes = document.getElementById("botoes-iniciais");
-    if (botoes) botoes.style.display = "flex";
+    document.getElementById("botoes-iniciais").style.display = "flex";
   }
 
   function ocultarBotoesIniciais() {
-    const botoes = document.getElementById("botoes-iniciais");
-    if (botoes) botoes.style.display = "none";
+    document.getElementById("botoes-iniciais").style.display = "none";
   }
 
   function mostrarBotoesPosSalvar() {
-    const botoes = document.getElementById("botoes-pos-salvar");
-    if (botoes) botoes.style.display = "flex";
+    document.getElementById("botoes-pos-salvar").style.display = "flex";
   }
 
   function ocultarBotoesPosSalvar() {
-    const botoes = document.getElementById("botoes-pos-salvar");
-    if (botoes) botoes.style.display = "none";
+    document.getElementById("botoes-pos-salvar").style.display = "none";
   }
 </script>
 </body>
