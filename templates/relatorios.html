@@ -1,11 +1,111 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+  <meta charset="UTF-8">
   <title>Relatórios - PEI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filters input,
+    .filters select {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc; 
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    tr:hover {
+      background-color: #fafafa;
+    }
+  </style>
 </head>
 <body>
-  <h1>Relatórios</h1>
-  <p>Em breve: geração de relatórios sobre os PEIs</p>
-  <a href="/dashboard">Voltar ao Dashboard</a>
+  <div class="form-container">
+    <h2>Relatório de Alunos Cadastrados</h2>
+    <div class="filters">
+      <input type="text" id="filtroNome" placeholder="Buscar por nome">
+      <input type="text" id="filtroCurso" placeholder="Curso">
+      <input type="text" id="filtroUnidade" placeholder="Unidade">
+      <select id="filtroPeriodo">
+        <option value="">Todos os períodos</option>
+        <option value="1º Semestre">1º Semestre</option>
+        <option value="2º Semestre">2º Semestre</option>
+      </select>
+      <button onclick="filtrarAlunos()">Filtrar</button>
+    </div>
+    <table id="tabelaAlunos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Curso</th>
+          <th>Unidade</th>
+          <th>Período</th>
+          <th>Data Elaboração</th>
+          <th>Responsável</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function filtrarAlunos() {
+      const nome = document.getElementById("filtroNome").value.trim();
+      const curso = document.getElementById("filtroCurso").value.trim();
+      const unidade = document.getElementById("filtroUnidade").value.trim();
+      const periodo = document.getElementById("filtroPeriodo").value;
+
+      const params = new URLSearchParams();
+      if (nome) params.append("nome", nome);
+      if (curso) params.append("curso", curso);
+      if (unidade) params.append("unidade", unidade);
+      if (periodo) params.append("periodo", periodo);
+
+      const res = await fetch(`/api/alunos?${params}`);
+      const alunos = await res.json();
+
+      const tbody = document.querySelector("#tabelaAlunos tbody");
+      tbody.innerHTML = "";
+
+      if (!alunos.length) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>Nenhum aluno encontrado.</td></tr>";
+        return;
+      }
+
+      alunos.forEach(a => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${a.id}</td>
+            <td>${a.nome}</td>
+            <td>${a.curso || '-'}</td>
+            <td>${a.unidade || '-'}</td>
+            <td>${a.periodo || '-'}</td>
+            <td>${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : '-'}</td>
+            <td>${a.responsavel || '-'}</td>
+          </tr>`;
+      });
+    }
+
+    // Carrega todos os alunos ao abrir a página
+    window.onload = filtrarAlunos;
+  </script>
 </body>
 </html>
