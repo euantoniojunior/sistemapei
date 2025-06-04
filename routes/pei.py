@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string, session
+from flask import Blueprint, request, jsonify, render_template_string, session, current_app
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
@@ -7,10 +7,8 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
 
-# Garantir que a pasta de uploads esteja definida
-from app import app  # Importa a instância do app para acessar UPLOAD_FOLDER
-
 pei_bp = Blueprint('pei', __name__)
+
 
 def parse_date(date_str):
     """Converte string de data para objeto date"""
@@ -22,11 +20,11 @@ def parse_date(date_str):
         return None
 
 
-# ✅ Rota: Salvar novo PEI (com suporte a upload de laudo médico)
+# ✅ Rota: Salvar novo PEI
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        # Usar request.form para campos normais e request.files para uploads
+        # Pega os dados do formulário
         aluno_data = json.loads(request.form.get('aluno'))
         conteudo_data = json.loads(request.form.get('conteudo'))
 
@@ -76,10 +74,11 @@ def criar_pei():
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                aluno.laudo_medico_arquivo = filename  # Salva o nome do arquivo no banco
+                upload_folder = current_app.config['UPLOAD_FOLDER']  # ✅ Usa current_app
+                file.save(os.path.join(upload_folder, filename))
+                aluno.laudo_medico_arquivo = filename
 
-        # Salva o PEI como JSON
+        # Salva o conteúdo do PEI como JSON
         pei = PEI(
             student_id=aluno.id,
             conteudo=json.dumps(conteudo_data, ensure_ascii=False)
