@@ -27,7 +27,8 @@ CORS(app)
 app.secret_key = os.getenv('SECRET_KEY', 'segredo_senac_2025')
 
 # Banco de dados
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pei.db').replace("postgres://", "postgresql://", 1)
+db_uri = os.getenv('DATABASE_URL', 'sqlite:///pei.db').replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa banco
@@ -98,7 +99,6 @@ def logout_page():
 def criar_usuarios_padrao():
     with app.app_context():
         try:
-            # Garante que a sessão esteja ativa
             admin = User.query.filter_by(username='admin').first()
             mediador = User.query.filter_by(username='mediador').first()
 
@@ -123,15 +123,14 @@ def criar_usuarios_padrao():
 # ========== INICIALIZAÇÃO DO BANCO E USUÁRIOS ==========
 @app.before_request
 def inicializar_usuarios_uma_vez():
-    if 'usuarios_inicializados' not in app.config:
+    if not getattr(app, 'usuarios_inicializados', False):
         criar_usuarios_padrao()
-        app.config['usuarios_inicializados'] = True
+        app.usuarios_inicializados = True
 
 # ========== RODAR LOCALMENTE (opcional) ==========
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         criar_usuarios_padrao()  # Executa localmente também
-
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
