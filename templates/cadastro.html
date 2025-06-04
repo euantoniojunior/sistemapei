@@ -99,14 +99,8 @@
     button.btn-finalizar {
       background-color: #003D7C;
     }
-    button.btn-finalizar:hover {
-      background-color: #002a52;
-    }
     button.btn-editar {
       background-color: #2c3e50;
-    }
-    button.btn-editar:hover {
-      background-color: #1a252f;
     }
     #msg {
       margin-top: 20px;
@@ -134,9 +128,9 @@
     <label for="nome">Nome do Aluno:</label>
     <input type="text" name="nome" id="nome" required>
     <div class="grid-2">
-      <input type="text" name="curso" placeholder="Curso Técnico" required>
-      <input type="text" name="unidade" placeholder="Unidade SENAC" required>
-      <input type="text" name="periodo" placeholder="Período Letivo" required>
+      <input type="text" name="curso" id="curso" placeholder="Curso Técnico" required>
+      <input type="text" name="unidade" id="unidade" placeholder="Unidade SENAC" required>
+      <input type="text" name="periodo" id="periodo" placeholder="Período Letivo" required>
       <label for="data_elaboracao">Data de Elaboração:</label>
       <input type="date" name="data_elaboracao" id="data_elaboracao" required>
     </div>
@@ -148,7 +142,7 @@
     <label>Data de Nascimento:</label>
     <div class="grid-3">
       <input type="date" name="data_nascimento" id="data_nascimento">
-      <input type="number" name="idade" placeholder="Idade (anos)">
+      <input type="number" name="idade" id="idade" placeholder="Idade (anos)">
       <input type="text" name="diagnostico_cid" id="diagnostico_cid" placeholder="Diagnóstico (CID)">
       <input type="text" name="transtorno_identificado" id="transtorno_identificado" placeholder="Transtorno identificado">
       <div style="display:flex; flex-direction: column; gap: 5px;">
@@ -219,11 +213,10 @@
     <!-- Acompanhamento -->
     <label>Observações gerais:</label>
     <textarea name="observacoes_gerais" id="observacoes_gerais" rows="4" placeholder="Observações gerais..."></textarea>
-    
-    <!-- Próxima Avaliação -->
+
     <label for="proxima_avaliacao">Próxima Avaliação</label>
     <div class="grid-2">
-      <input type="date" name="proxima_avaliacao" id="proxima_avaliacao" placeholder="Data da próxima avaliação">
+      <input type="date" name="proxima_avaliacao" id="proxima_avaliacao">
       <input type="text" name="responsavel_legal" id="responsavel_legal" placeholder="Responsável legal">
       <input type="text" name="orientador_responsavel" id="orientador_responsavel" placeholder="Orientador responsável">
       <input type="text" name="supervisor" id="supervisor" placeholder="Supervisor">
@@ -249,107 +242,144 @@
 </div>
 
 <script>
-  const form = document.getElementById('peiForm');
-  const msgEl = document.getElementById('msg');
-  let cadastroFinalizado = false;
+  // Garantindo que o formulário esteja disponível
+  const form = document.getElementById("peiForm");
+  const msgEl = document.getElementById("msg");
 
-  // Função chamada ao submeter o formulário
-  form.addEventListener("submit", async function(e) {
-    e.preventDefault();
+  if (!form) {
+    console.error("❌ Formulário não encontrado!");
+  } else {
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
 
-    const aluno = {
-      nome: document.getElementById("nome").value.trim(),
-      curso: document.getElementById("curso").value.trim(),
-      unidade: document.getElementById("unidade").value.trim(),
-      periodo: document.getElementById("periodo").value.trim(),
-      data_elaboracao: document.getElementById("data_elaboracao").value,
-      responsavel: document.getElementById("responsavel").value.trim(),
-      data_nascimento: document.getElementById("data_nascimento").value,
-      idade: document.getElementById("idade").value,
-      diagnostico_cid: document.getElementById("diagnostico_cid").value,
-      transtorno_identificado: document.getElementById("transtorno_identificado").value,
-      laudo_medico: document.getElementById("laudo_medico").value,
-      psicologo: document.getElementById("psicologo").value,
-      psiquiatra: document.getElementById("psiquiatra").value,
-      psicopedagogo: document.getElementById("psicopedagogo").value,
-      outros_profissionais: document.getElementById("outros_profissionais").value,
-      perfil_aluno: document.getElementById("perfil_aluno").value,
-      observacoes_gerais: document.getElementById("observacoes_gerais").value,
-      proxima_avaliacao: document.getElementById("proxima_avaliacao").value,
-      responsavel_legal: document.getElementById("responsavel_legal").value,
-      orientador_responsavel: document.getElementById("orientador_responsavel").value,
-      supervisor: document.getElementById("supervisor").value,
-      gerente_unidade: document.getElementById("gerente_unidade").value
-    };
+      const nome = document.getElementById("nome");
+      const curso = document.getElementById("curso");
+      const unidade = document.getElementById("unidade");
+      const periodo = document.getElementById("periodo");
+      const data_elaboracao = document.getElementById("data_elaboracao");
+      const responsavel = document.getElementById("responsavel");
 
-    const conteudo = {
-      objetivos_gerais: document.getElementById("objetivos_gerais").value,
-      adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
-      intervencoes_complementares: document.getElementById("intervencoes_complementares").value,
-      metas: {
-        curto_prazo: {
-          meta: document.getElementById("meta_curto_prazo").value,
-          responsavel: document.getElementById("responsavel_curto").value,
-          avaliacao: document.getElementById("avaliacao_curto").value
-        },
-        medio_prazo: {
-          meta: document.getElementById("meta_medio_prazo").value,
-          responsavel: document.getElementById("responsavel_medio").value,
-          avaliacao: document.getElementById("avaliacao_medio").value
-        },
-        longo_prazo: {
-          meta: document.getElementById("meta_longo_prazo").value,
-          responsavel: document.getElementById("responsavel_longo").value,
-          avaliacao: document.getElementById("avaliacao_longo").value
+      // Verifica se todos os campos obrigatórios estão preenchidos
+      const requiredFields = [
+        { el: nome, name: "Nome do Aluno" },
+        { el: curso, name: "Curso Técnico" },
+        { el: unidade, name: "Unidade SENAC" },
+        { el: periodo, name: "Período Letivo" },
+        { el: data_elaboracao, name: "Data de Elaboração" },
+        { el: responsavel, name: "Responsável pela Elaboração" }
+      ];
+
+      let missingField = false;
+
+      requiredFields.forEach(({ el, name }) => {
+        if (!el || !el.value.trim()) {
+          console.warn(`Campo ausente: ${name}`);
+          missingField = true;
         }
-      }
-    };
-
-    const formData = new FormData();
-    formData.append("aluno", JSON.stringify(aluno));
-    formData.append("conteudo", JSON.stringify(conteudo));
-
-    if (document.getElementById("laudo_medico_arquivo").files.length > 0) {
-      formData.append("laudo_medico_arquivo", document.getElementById("laudo_medico_arquivo").files[0]);
-    }
-
-    try {
-      const res = await fetch("/api/pei", {
-        method: "POST",
-        body: formData
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        msgEl.style.color = "green";
-        msgEl.innerText = "✅ PEI salvo com sucesso!";
-        bloquearCampos(true);
-        ocultarBotoesIniciais();
-        mostrarBotoesPosSalvar();
-      } else {
+      if (missingField) {
         msgEl.style.color = "red";
-        msgEl.innerText = "❌ Erro ao salvar: " + (data.error || "Verifique os dados.");
+        msgEl.innerText = "⚠️ Campos obrigatórios ausentes.";
+        return;
       }
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
-      msgEl.style.color = "red";
-      msgEl.innerText = "❌ Falha na comunicação com o servidor.";
-    }
-  });
+
+      const aluno = {
+        nome: nome.value.trim(),
+        curso: curso.value.trim(),
+        unidade: unidade.value.trim(),
+        periodo: periodo.value.trim(),
+        data_elaboracao: data_elaboracao.value,
+        responsavel: responsavel.value.trim(),
+        data_nascimento: document.getElementById("data_nascimento")?.value || "",
+        idade: document.getElementById("idade")?.value || "",
+        diagnostico_cid: document.getElementById("diagnostico_cid")?.value || "",
+        transtorno_identificado: document.getElementById("transtorno_identificado")?.value || "",
+        laudo_medico: document.getElementById("laudo_medico")?.value || "",
+        psicologo: document.getElementById("psicologo")?.value || "",
+        psiquiatra: document.getElementById("psiquiatra")?.value || "",
+        psicopedagogo: document.getElementById("psicopedagogo")?.value || "",
+        outros_profissionais: document.getElementById("outros_profissionais")?.value || "",
+        perfil_aluno: document.getElementById("perfil_aluno")?.value || "",
+        observacoes_gerais: document.getElementById("observacoes_gerais")?.value || "",
+        proxima_avaliacao: document.getElementById("proxima_avaliacao")?.value || "",
+        responsavel_legal: document.getElementById("responsavel_legal")?.value || "",
+        orientador_responsavel: document.getElementById("orientador_responsavel")?.value || "",
+        supervisor: document.getElementById("supervisor")?.value || "",
+        gerente_unidade: document.getElementById("gerente_unidade")?.value || ""
+      };
+
+      const conteudo = {
+        objetivos_gerais: document.getElementById("objetivos_gerais")?.value || "",
+        adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas")?.value || "",
+        intervencoes_complementares: document.getElementById("intervencoes_complementares")?.value || "",
+        metas: {
+          curto_prazo: {
+            meta: document.getElementById("meta_curto_prazo")?.value || "",
+            responsavel: document.getElementById("responsavel_curto")?.value || "",
+            avaliacao: document.getElementById("avaliacao_curto")?.value || ""
+          },
+          medio_prazo: {
+            meta: document.getElementById("meta_medio_prazo")?.value || "",
+            responsavel: document.getElementById("responsavel_medio")?.value || "",
+            avaliacao: document.getElementById("avaliacao_medio")?.value || ""
+          },
+          longo_prazo: {
+            meta: document.getElementById("meta_longo_prazo")?.value || "",
+            responsavel: document.getElementById("responsavel_longo")?.value || "",
+            avaliacao: document.getElementById("avaliacao_longo")?.value || ""
+          }
+        }
+      };
+
+      const formData = new FormData();
+      formData.append("aluno", JSON.stringify(aluno));
+      formData.append("conteudo", JSON.stringify(conteudo));
+
+      const laudoInput = document.getElementById("laudo_medico_arquivo");
+      if (laudoInput && laudoInput.files.length > 0) {
+        formData.append("laudo_medico_arquivo", laudoInput.files[0]);
+      }
+
+      try {
+        const res = await fetch("/api/pei", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          msgEl.style.color = "green";
+          msgEl.innerText = "✅ PEI salvo com sucesso!";
+          bloquearCampos(true);
+          ocultarBotoesIniciais();
+          mostrarBotoesPosSalvar();
+        } else {
+          msgEl.style.color = "red";
+          msgEl.innerText = "❌ Erro ao salvar: " + (data.error || "Verifique os dados.");
+        }
+      } catch (err) {
+        console.error("Erro ao salvar:", err);
+        msgEl.style.color = "red";
+        msgEl.innerText = "❌ Falha na comunicação com o servidor.";
+      }
+    });
+  }
 
   function bloquearCampos(bloquear = true) {
-    Array.from(form.elements).forEach(el => {
+    const inputs = document.querySelectorAll("input, select, textarea");
+    inputs.forEach(el => {
       if (el.type !== 'button') el.readOnly = bloquear;
     });
   }
 
   function limparCampos() {
-    form.reset();
-    msgEl.innerText = '';
-    ocultarBotoesPosSalvar();
+    const form = document.getElementById("peiForm");
+    if (form) form.reset();
+    msgEl.innerText = "";
     mostrarBotoesIniciais();
-    cadastroFinalizado = false;
+    ocultarBotoesPosSalvar();
   }
 
   function editarCampos() {
@@ -368,62 +398,60 @@
       periodo: document.getElementById("periodo").value,
       data_elaboracao: document.getElementById("data_elaboracao").value,
       responsavel: document.getElementById("responsavel").value,
-      data_nascimento: document.getElementById("data_nascimento").value,
-      idade: document.getElementById("idade").value,
-      diagnostico_cid: document.getElementById("diagnostico_cid").value,
-      transtorno_identificado: document.getElementById("transtorno_identificado").value,
-      laudo_medico: document.getElementById("laudo_medico").value,
-      psicologo: document.getElementById("psicologo").value,
-      psiquiatra: document.getElementById("psiquiatra").value,
-      psicopedagogo: document.getElementById("psicopedagogo").value,
-      outros_profissionais: document.getElementById("outros_profissionais").value,
-      perfil_aluno: document.getElementById("perfil_aluno").value,
-      observacoes_gerais: document.getElementById("observacoes_gerais").value,
-      proxima_avaliacao: document.getElementById("proxima_avaliacao").value,
-      responsavel_legal: document.getElementById("responsavel_legal").value,
-      orientador_responsavel: document.getElementById("orientador_responsavel").value,
-      supervisor: document.getElementById("supervisor").value,
-      gerente_unidade: document.getElementById("gerente_unidade").value,
-      meta_curto_prazo: document.getElementById("meta_curto_prazo").value,
-      responsavel_curto: document.getElementById("responsavel_curto").value,
-      avaliacao_curto: document.getElementById("avaliacao_curto").value,
-      meta_medio_prazo: document.getElementById("meta_medio_prazo").value,
-      responsavel_medio: document.getElementById("responsavel_medio").value,
-      avaliacao_medio: document.getElementById("avaliacao_medio").value,
-      meta_longo_prazo: document.getElementById("meta_longo_prazo").value,
-      responsavel_longo: document.getElementById("responsavel_longo").value,
-      avaliacao_longo: document.getElementById("avaliacao_longo").value,
-      adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
-      intervencoes_complementares: document.getElementById("intervencoes_complementares").value,
-      objetivos_gerais: document.getElementById("objetivos_gerais").value
+      data_nascimento: document.getElementById("data_nascimento")?.value || "",
+      idade: document.getElementById("idade")?.value || "",
+      diagnostico_cid: document.getElementById("diagnostico_cid")?.value || "",
+      transtorno_identificado: document.getElementById("transtorno_identificado")?.value || "",
+      laudo_medico: document.getElementById("laudo_medico")?.value || "",
+      psicologo: document.getElementById("psicologo")?.value || "",
+      psiquiatra: document.getElementById("psiquiatra")?.value || "",
+      psicopedagogo: document.getElementById("psicopedagogo")?.value || "",
+      outros_profissionais: document.getElementById("outros_profissionais")?.value || "",
+      perfil_aluno: document.getElementById("perfil_aluno")?.value || "",
+      observacoes_gerais: document.getElementById("observacoes_gerais")?.value || "",
+      proxima_avaliacao: document.getElementById("proxima_avaliacao")?.value || "",
+      responsavel_legal: document.getElementById("responsavel_legal")?.value || "",
+      orientador_responsavel: document.getElementById("orientador_responsavel")?.value || "",
+      supervisor: document.getElementById("supervisor")?.value || "",
+      gerente_unidade: document.getElementById("gerente_unidade")?.value || "",
+      meta_curto_prazo: document.getElementById("meta_curto_prazo")?.value || "",
+      responsavel_curto: document.getElementById("responsavel_curto")?.value || "",
+      avaliacao_curto: document.getElementById("avaliacao_curto")?.value || "",
+      meta_medio_prazo: document.getElementById("meta_medio_prazo")?.value || "",
+      responsavel_medio: document.getElementById("responsavel_medio")?.value || "",
+      avaliacao_medio: document.getElementById("avaliacao_medio")?.value || "",
+      meta_longo_prazo: document.getElementById("meta_longo_prazo")?.value || "",
+      responsavel_longo: document.getElementById("responsavel_longo")?.value || "",
+      avaliacao_longo: document.getElementById("avaliacao_longo")?.value || "",
+      adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas")?.value || "",
+      intervencoes_complementares: document.getElementById("intervencoes_complementares")?.value || "",
+      objetivos_gerais: document.getElementById("objetivos_gerais")?.value || ""
     };
 
-    // Salva temporariamente no localStorage para usar na nova aba
     localStorage.setItem("peiPreview", JSON.stringify(aluno));
     localStorage.setItem("peiConteudo", JSON.stringify(conteudo));
-
-    // Abre nova aba com o preview
     window.open('/preview', '_blank');
-
-    // Atualiza estado local
-    cadastroFinalizado = true;
     alert("✅ Cadastro finalizado. Visualize-o na nova aba.");
   }
 
   function mostrarBotoesIniciais() {
-    document.getElementById("botoes-iniciais").style.display = "flex";
+    const botoes = document.getElementById("botoes-iniciais");
+    if (botoes) botoes.style.display = "flex";
   }
 
   function ocultarBotoesIniciais() {
-    document.getElementById("botoes-iniciais").style.display = "none";
+    const botoes = document.getElementById("botoes-iniciais");
+    if (botoes) botoes.style.display = "none";
   }
 
   function mostrarBotoesPosSalvar() {
-    document.getElementById("botoes-pos-salvar").style.display = "flex";
+    const botoes = document.getElementById("botoes-pos-salvar");
+    if (botoes) botoes.style.display = "flex";
   }
 
   function ocultarBotoesPosSalvar() {
-    document.getElementById("botoes-pos-salvar").style.display = "none";
+    const botoes = document.getElementById("botoes-pos-salvar");
+    if (botoes) botoes.style.display = "none";
   }
 </script>
 </body>
