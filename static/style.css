@@ -1,4 +1,20 @@
 /* style.css - Estilo global */
+.btn-voltar {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background-color: #003D7C;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.btn-voltar:hover {
+  background-color: #002a52;
+}
+
 * {
   box-sizing: border-box;
 }
