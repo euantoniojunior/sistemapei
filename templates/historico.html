@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Histórico de Alterações - PEI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <style>
     .form-container {
@@ -14,19 +13,16 @@
       box-shadow: 0 4px 16px rgba(0,0,0,0.1);
       padding: 30px;
     }
-
     h2 {
-      color: #003D7C; 
+      color: #003D7C;
       text-align: center;
       margin-bottom: 20px;
     }
-
     label {
       font-weight: bold;
       display: block;
       margin-bottom: 10px;
     }
-
     input[type="number"] {
       width: 100%;
       padding: 12px;
@@ -34,101 +30,103 @@
       border-radius: 6px;
       margin-bottom: 20px;
     }
-
+    button {
+      background-color: #F7931E;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #e67e22;
+    }
     .card-historico {
       background: #f9f9f9;
       padding: 20px;
       border-left: 5px solid #F7931E;
       margin-top: 20px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-
     pre {
-      background: #f5f5f5;
+      background: #f1f1f1;
       padding: 10px;
       overflow-x: auto;
-      border-radius: 6px;
       font-size: 13px;
+      border-radius: 6px;
     }
-
     #msg {
-      text-align: center;
       margin-top: 15px;
+      text-align: center;
       font-weight: bold;
     }
-
-    #msg.green {
-      color: green;
-    }
-
-    #msg.red {
-      color: red;
-    }
+    #msg.red { color: red; }
+    #msg.green { color: green; }
   </style>
 </head>
 <body>
+<div class="form-container">
+  <h2>Histórico de Alterações</h2>
+  <label for="peiId">Digite o ID do PEI:</label>
+  <input type="number" id="peiId" placeholder="Ex: 123">
+  <button onclick="carregarHistorico()">Carregar Histórico</button>
+  <p id="msg"></p>
+  <div id="historicoArea"></div>
+</div>
 
-  <div class="form-container">
-    <h2>Histórico de Alterações</h2>
+<script>
+  async function carregarHistorico() {
+    const peiId = document.getElementById('peiId').value.trim();
+    const historicoArea = document.getElementById('historicoArea');
+    const msgEl = document.getElementById('msg');
 
-    <label for="peiId">Digite o ID do PEI:</label>
-    <input type="number" id="peiId" placeholder="Ex: 123">
+    if (!peiId || isNaN(peiId)) {
+      msgEl.style.color = 'red';
+      msgEl.innerText = "Por favor, insira um ID válido.";
+      return;
+    }
 
-    <button onclick="carregarHistorico()">Carregar Histórico</button>
+    try {
+      const res = await fetch(`/api/historico/${peiId}`);
+      const historico = await res.json();
 
-    <p id="msg"></p>
-    <div id="historicoArea"></div>
-  </div>
-
-  <script>
-    async function carregarHistorico() {
-      const peiId = document.getElementById('peiId').value;
-      const historicoArea = document.getElementById('historicoArea');
-      const msgEl = document.getElementById('msg');
-
-      if (!peiId) {
-        msgEl.innerText = "Por favor, insira um ID válido.";
-        msgEl.className = "red";
+      if (!historico.length) {
+        msgEl.style.color = 'red';
+        msgEl.innerText = "Nenhuma alteração registrada ainda.";
+        historicoArea.innerHTML = "";
         return;
       }
 
       msgEl.innerText = "";
-      try {
-        const res = await fetch(`/api/historico/${peiId}`);
-        const historico = await res.json();
+      historicoArea.innerHTML = "<h3>Registro de Alterações</h3>";
 
-        if (!historico.length) {
-          msgEl.innerText = "Nenhuma alteração registrada ainda.";
-          msgEl.className = "red";
-          historicoArea.innerHTML = "";
-          return;
-        }
+      historico.forEach(h => {
+        const antes = JSON.parse(h.conteudo_anterior || '{}');
+        const depois = JSON.parse(h.conteudo_novo || '{}');
 
-        historicoArea.innerHTML = "<h3>Registro de Alterações</h3>";
+        const diff = Object.keys(depois).reduce((acc, key) => {
+          if (depois[key] !== antes[key]) {
+            acc.push(`• ${key}: "${antes[key]}" → "${depois[key]}"`);
+          }
+          return acc;
+        }, []);
 
-        historico.forEach(h => {
-          historicoArea.innerHTML += `
-            <div class="card-historico">
-              <strong>ID do PEI:</strong> ${h.pei_id}<br>
-              <strong>Data da Edição:</strong> ${new Date(h.data_edicao).toLocaleString()}<br>
-              <strong>Editado por:</strong> Usuário ID ${h.editado_por}<br><br>
+        historicoArea.innerHTML += `
+          <div class="card-historico">
+            <strong>ID do PEI:</strong> ${h.pei_id}<br>
+            <strong>Editado por:</strong> Usuário ID ${h.editado_por}<br>
+            <strong>Data da Edição:</strong> ${new Date(h.data_edicao).toLocaleString()}<br><br>
+            <strong>Diferenças:</strong>
+            <ul>${diff.map(d => `<li>${d}</li>`).join("")}</ul>
+          </div>`;
+      });
 
-              <strong>Conteúdo Antes:</strong>
-              <pre>${h.conteudo_anterior}</pre>
-
-              <strong>Conteúdo Depois:</strong>
-              <pre>${h.conteudo_novo}</pre>
-            </div>`;
-        });
-
-      } catch (err) {
-        console.error(err);
-        msgEl.innerText = "❌ Erro ao carregar histórico.";
-        msgEl.className = "red";
-      }
+    } catch (err) {
+      console.error("Erro ao carregar histórico:", err);
+      msgEl.style.color = "red";
+      msgEl.innerText = "❌ Falha ao carregar histórico.";
     }
-  </script>
-
+  }
+</script>
 </body>
 </html>
