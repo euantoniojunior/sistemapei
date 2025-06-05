@@ -9,6 +9,7 @@ import os
 
 pei_bp = Blueprint('pei', __name__)
 
+
 def parse_date(date_str):
     """Converte string de data para objeto date"""
     if not date_str:
@@ -23,6 +24,7 @@ def parse_date(date_str):
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
+        # Verifica o tipo de conteúdo
         if request.content_type.startswith('application/json'):
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -31,6 +33,7 @@ def criar_pei():
             aluno_data = json.loads(request.form.get('aluno'))
             conteudo_data = json.loads(request.form.get('conteudo'))
 
+        # Valida campos obrigatórios
         campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
         faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
         if faltando:
@@ -68,10 +71,10 @@ def criar_pei():
             supervisor=aluno_data.get('supervisor'),
             gerente_unidade=aluno_data.get('gerente_unidade')
         )
-
         db.session.add(aluno)
         db.session.flush()
 
+        # Upload do laudo médico (opcional)
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
@@ -79,21 +82,14 @@ def criar_pei():
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 aluno.laudo_medico_arquivo = filename
 
+        # Salva o conteúdo do PEI como JSON
         pei = PEI(
             student_id=aluno.id,
             conteudo=json.dumps(conteudo_data, ensure_ascii=False)
         )
         db.session.add(pei)
-
-        historico = PEIHistory(
-            pei_id=pei.id,
-            editado_por=request.args.get('user_id') or 1,
-            conteudo_anterior="{}",
-            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
-        )
-        db.session.add(historico)
-
         db.session.commit()
+
         return jsonify({"message": "✅ PEI criado com sucesso!", "student_id": aluno.id}), 201
 
     except Exception as e:
@@ -105,7 +101,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar alunos por nome (usada na search.html)
+# ✅ Nova rota: Buscar aluno por nome (usada na search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -142,6 +138,39 @@ def buscar_alunos():
         'supervisor': a.supervisor,
         'gerente_unidade': a.gerente_unidade
     } for a in alunos])
+
+
+# ✅ Nova rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
+
+    aluno_dict = aluno.to_dict()
+    if pei:
+        try:
+            conteudo = pei.get_conteudo()
+            aluno_dict.update({
+                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
+                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
+                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
+                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
+                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
+                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
+                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
+                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
+                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
+                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
+                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
+                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
+            })
+        except Exception as e:
+            print("Erro ao processar conteúdo do PEI:", e)
+
+    return jsonify(aluno_dict), 200
 
 
 # ✅ Rota: Gerar PDF do PEI
