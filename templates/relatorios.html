@@ -32,9 +32,6 @@
     th {
       background-color: #f2f2f2;
     }
-    tr:nth-child(even) {
-      background-color: #fafafa;
-    }
     tr:hover {
       background-color: #eaeaea;
     }
@@ -90,22 +87,27 @@
   <script>
     async function carregarRelatorio() {
       const tbody = document.getElementById("lista-alunos");
-      const res = await fetch("/api/relatorios");
-      const alunos = await res.json();
-      if (!alunos.length) {
-        tbody.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado ainda.</td></tr>";
-        return;
-      }
+      try {
+        const res = await fetch("/api/relatorios");
+        const alunos = await res.json();
+        if (!alunos.length) {
+          tbody.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado ainda.</td></tr>";
+          return;
+        }
 
-      tbody.innerHTML = alunos.map(a => `
-        <tr onclick="location.href='/cadastro?id=${a.id}'">
-          <td>${a.id}</td>
-          <td>${a.nome}</td>
-          <td>${a.curso || 'Não informado'}</td>
-          <td>${a.unidade || 'Não informado'}</td>
-          <td>${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A'}</td>
-        </tr>
-      `).join("");
+        tbody.innerHTML = alunos.map(a => `
+          <tr onclick="location.href='/cadastro?id=${a.id}'">
+            <td>${a.id}</td>
+            <td>${a.nome}</td>
+            <td>${a.curso || 'Não informado'}</td>
+            <td>${a.unidade || 'Não informada'}</td>
+            <td>${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A'}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.error("Erro ao carregar relatório:", err);
+        tbody.innerHTML = "<tr><td colspan='5'>❌ Erro ao carregar dados.</td></tr>";
+      }
     }
 
     window.onload = carregarRelatorio;
