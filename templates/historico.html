@@ -2,12 +2,12 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Histórico de Alterações - PEI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>Histórico de Alterações - Sistema PEI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <style>
     .form-container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
       background: white;
       border-radius: 12px;
@@ -15,150 +15,69 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C;  
+      color: #003D7C;   
       text-align: center;
-      margin-bottom: 20px;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 10px;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
       margin-bottom: 20px;
     }
     .card-historico {
-      background: #f9f9f9;
-      padding: 20px;
+      background: #fef8ec;
+      border: 1px solid #eee;
       border-left: 5px solid #F7931E;
-      margin-top: 20px;
+      padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    pre {
-      background: #f5f5f5;
-      padding: 10px;
-      overflow-x: auto;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-    #msg {
-      text-align: center;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    #msg.green {
-      color: green;
-    }
-    #msg.red {
-      color: red;
-    }
-
-    button.btn-voltar {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      background-color: #003D7C;
-      color: white;
-      border: none;
-      border-radius: 6px;
+      margin-top: 10px;
       cursor: pointer;
-      margin-bottom: 20px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    button.btn-voltar:hover {
-      background-color: #002a52;
+    .card-historico:hover {
+      background-color: #f9f9f9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .button-group button {
+      width: auto;
+      min-width: 140px;
     }
   </style>
 </head>
 <body>
-
-  <!-- Botão Voltar -->
-  <button class="btn-voltar" onclick="location.href='/dashboard'">⬅ Voltar ao Dashboard</button>
-
   <div class="form-container">
     <h2>Histórico de Alterações</h2>
-    
-    <!-- Campo de busca por nome -->
-    <label for="studentName">Digite o nome do aluno:</label>
-    <input type="text" id="studentName" placeholder="Ex: João da Silva">
 
-    <!-- Botão Buscar -->
-    <button onclick="buscarHistorico()">Buscar Histórico</button>
+    <div class="historico-area" id="historicoArea">
+      <!-- Histórico será carregado aqui via JS -->
+    </div>
 
-    <!-- Feedback -->
-    <p id="msg"></p>
-
-    <!-- Área onde será exibido o histórico -->
-    <div id="historicoArea"></div>
+    <!-- Botão Voltar -->
+    <div class="button-group">
+      <a href="/dashboard" style="text-decoration: none;">
+        <button>Voltar ao Dashboard</button>
+      </a>
+    </div>
   </div>
 
   <script>
-    async function buscarHistorico() {
-      const studentName = document.getElementById('studentName').value.trim();
+    // Simulação de carregamento (substitua pela API real quando disponível)
+    window.onload = () => {
       const historicoArea = document.getElementById('historicoArea');
-      const msgEl = document.getElementById('msg');
-
-      if (!studentName) {
-        msgEl.className = 'red';
-        msgEl.innerText = "Por favor, digite um nome.";
-        return;
-      }
-
-      msgEl.innerText = "Buscando aluno...";
-      msgEl.className = 'red';
-
-      try {
-        // Primeiro, buscar aluno(s) pelo nome
-        const resAluno = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
-        const alunos = await resAluno.json();
-
-        if (!alunos.length) {
-          msgEl.innerText = "❌ Nenhum aluno encontrado com esse nome.";
-          return;
-        }
-
-        // Para cada aluno, buscar seu histórico
-        let totalHistorico = [];
-        for (const aluno of alunos) {
-          const resHist = await fetch(`/api/historico/${aluno.id}`);
-          const historico = await resHist.json();
-          totalHistorico.push(...historico.map(h => ({ ...h, alunoNome: aluno.nome })));
-        }
-
-        // Limpa área e mostra resultados
-        historicoArea.innerHTML = "";
-        msgEl.innerText = `${totalHistorico.length} histórico(s) encontrado(s).`;
-        msgEl.className = "green";
-
-        if (!totalHistorico.length) {
-          historicoArea.innerHTML = "<p>Nenhuma alteração registrada.</p>";
-          return;
-        }
-
-        totalHistorico.forEach(h => {
-          historicoArea.innerHTML += `
-            <div class="card-historico">
-              <strong>Aluno:</strong> ${h.alunoNome}<br>
-              <strong>ID do PEI:</strong> ${h.pei_id}<br>
-              <strong>Editado por:</strong> Usuário ID ${h.editado_por || 'Desconhecido'}<br>
-              <strong>Data da edição:</strong> ${new Date(h.data_edicao).toLocaleString()}<br><br>
-              <strong>Conteúdo Antes:</strong>
-              <pre>${h.conteudo_anterior}</pre>
-              <strong>Conteúdo Depois:</strong>
-              <pre>${h.conteudo_novo}</pre>
-            </div>`;
-        });
-
-      } catch (err) {
-        console.error("Erro ao carregar histórico:", err);
-        msgEl.className = "red";
-        msgEl.innerText = "❌ Erro ao carregar histórico.";
-      }
-    }
+      historicoArea.innerHTML = `
+        <div class="card-historico">
+          <strong>Data:</strong> 10/04/2025<br>
+          <strong>Autor:</strong> admin<br>
+          <strong>Descrição:</strong> Edição realizada no histórico do aluno João da Silva.
+        </div>
+        <div class="card-historico">
+          <strong>Data:</strong> 05/04/2025<br>
+          <strong>Autor:</strong> mediador<br>
+          <strong>Descrição:</strong> Cadastro inicial realizado.
+        </div>
+      `;
+    };
   </script>
 </body>
 </html>
