@@ -127,15 +127,18 @@ def criar_usuarios_padrao():
 
 # ========== INICIALIZAÇÃO DO BANCO E USUÁRIOS ==========
 @app.before_request
-def inicializar_usuarios_uma_vez():
-    if not getattr(app, 'usuarios_inicializados', False):
-        criar_usuarios_padrao()
-        app.usuarios_inicializados = True
+def inicializar_banco():
+    """Função para garantir que as tabelas existam"""
+    try:
+        db.create_all()
+        print("[INFO] Tabelas criadas com sucesso.")
+    except Exception as e:
+        print(f"[ERRO] Ao criar tabelas: {e}")
 
 # ========== RODAR LOCALMENTE (opcional) ==========
 if __name__ == '__main__':
     with app.app_context():
-       # db.create_all()#
-        criar_usuarios_padrao()  # Executa localmente também
+        inicializar_banco()
+        criar_usuarios_padrao()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
