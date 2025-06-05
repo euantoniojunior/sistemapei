@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template_string
-from models.models import Student, PEI, PEIHistory
+from models.models import Student, PEI
 from database.connection import db
 import pdfkit
 import json
@@ -17,6 +17,7 @@ def parse_date(date_str):
         return datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return None
+
 
 # ✅ Rota principal: Salvar ou editar um PEI
 @pei_bp.route('/api/pei', methods=['POST'])
@@ -38,6 +39,7 @@ def criar_pei():
                 "campos": faltando
             }), 400
 
+        # Conversão de datas
         data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
         data_nascimento = parse_date(aluno_data.get('data_nascimento'))
         proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
@@ -83,7 +85,6 @@ def criar_pei():
         )
         db.session.add(pei)
 
-        # Adiciona histórico
         historico = PEIHistory(
             pei_id=pei.id,
             editado_por=request.args.get('user_id') or 1,
@@ -103,7 +104,8 @@ def criar_pei():
             "detalhe": str(e)
         }), 500
 
-# ✅ Nova rota: Buscar aluno por nome (usada na search.html)
+
+# ✅ Nova rota: Buscar alunos por nome (usada na search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -141,64 +143,8 @@ def buscar_alunos():
         'gerente_unidade': a.gerente_unidade
     } for a in alunos])
 
-# ✅ Nova rota: Buscar aluno por ID (para edição)
-@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
-def buscar_aluno_por_id(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
 
-    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
-
-    aluno_dict = aluno.to_dict()
-    if pei:
-        try:
-            conteudo = pei.get_conteudo()
-            aluno_dict.update({
-                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
-                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
-                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
-                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
-                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
-                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
-                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
-                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
-                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
-                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
-                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
-                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
-            })
-        except Exception as e:
-            print("Erro ao processar conteúdo do PEI:", e)
-
-    return jsonify(aluno_dict), 200
-
-# ✅ Nova rota: Listar histórico de alterações
-@pei_bp.route('/api/historico', methods=['GET'])
-def get_historico():
-    historico = PEIHistory.query.order_by(PEIHistory.data_edicao.desc()).all()
-    return jsonify([{
-        'id': h.id,
-        'data_edicao': h.data_edicao.isoformat(),
-        'usuario': User.query.get(h.editado_por).username,
-        'conteudo_anterior': h.conteudo_anterior,
-        'conteudo_novo': h.conteudo_novo
-    } for h in historico]), 200
-
-# ✅ Nova rota: Relatórios - lista todos os alunos
-@pei_bp.route('/api/relatorios', methods=['GET'])
-def relatorio_alunos():
-    alunos = Student.query.all()
-    return jsonify([{
-        'id': a.id,
-        'nome': a.nome,
-        'curso': a.curso,
-        'unidade': a.unidade,
-        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
-        'responsavel': a.responsavel
-    } for a in alunos])
-
-# ✅ Nova rota: Gerar PDF do PEI
+# ✅ Rota: Gerar PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
@@ -212,15 +158,54 @@ def gerar_pdf():
       <head>
         <meta charset="UTF-8">
         <style>
-          body { font-family: 'DejaVu Sans', 'Roboto', sans-serif; padding: 40px; color: #333; font-size: 14px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .header img { max-width: 160px; margin-bottom: 10px; }
-          h1 { color: #003D7C; font-size: 24px; margin-top: 0; text-align: center; }
-          h2 { color: #003D7C; font-size: 18px; margin-top: 25px; border-left: 4px solid #F7931E; padding-left: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-          .assinatura { margin-top: 40px; display: flex; justify-content: space-between; flex-wrap: wrap; }
-          .assinatura div { width: 45%; text-align: center; margin: 10px 0; }
+          body {
+            font-family: 'DejaVu Sans', 'Roboto', sans-serif;
+            padding: 40px;
+            color: #333;
+            font-size: 14px;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .header img {
+            max-width: 160px;
+            margin-bottom: 10px;
+          }
+          h1 {
+            color: #003D7C;
+            font-size: 24px;
+            margin-top: 0;
+            text-align: center;
+          }
+          h2 {
+            color: #003D7C;
+            font-size: 18px;
+            margin-top: 25px;
+            border-left: 4px solid #F7931E;
+            padding-left: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+          }
+          .assinatura {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+          }
+          .assinatura div {
+            width: 45%;
+            text-align: center;
+            margin: 10px 0;
+          }
         </style>
       </head>
       <body>
@@ -236,7 +221,7 @@ def gerar_pdf():
         </div>
         <div style="display:flex; gap: 20px;">
           <p><strong>Data de Elaboração:</strong> {{ data_elaboracao }}</p>
-          <p><strong>Responsável:</strong> {{ responsavel }}</p>
+          <p><strong>Responsável pela Elaboração:</strong> {{ responsavel }}</p>
         </div>
         <h2>1. Identificação do Aluno</h2>
         <div style="display:flex; gap: 20px;">
