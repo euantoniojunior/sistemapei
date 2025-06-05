@@ -74,9 +74,20 @@
       justify-content: center;
       margin-top: 30px;
     }
-    .button-group button {
+    .btn-voltar {
+      background-color: #003D7C;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
       width: auto;
-      min-width: 140px;
+      min-width: 180px;
+    }
+    .btn-voltar:hover {
+      background-color: #002a54;
     }
   </style>
 </head>
@@ -91,7 +102,9 @@
     <!-- Botão Voltar -->
     <div class="button-group">
       <a href="/dashboard" style="text-decoration: none;">
-        <button>Voltar ao Dashboard</button>
+        <button class="btn-voltar">
+          ← Voltar ao Dashboard
+        </button>
       </a>
     </div>
   </div>
