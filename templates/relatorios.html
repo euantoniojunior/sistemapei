@@ -2,22 +2,22 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Relatórios - PEI</title>
+  <title>Relatórios - Sistema PEI</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    .filters {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+    .form-container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 30px;
     }
-    .filters input,
-    .filters select {
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc; 
-      font-size: 14px;
+    h2 {
+      color: #003D7C; 
+      text-align: center;
+      margin-bottom: 20px;
     }
     table {
       width: 100%;
@@ -25,97 +25,90 @@
       margin-top: 20px;
     }
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       padding: 10px;
       text-align: left;
     }
     th {
-      background-color: #f0f0f0;
+      background-color: #f2f2f2;
     }
-    tr:hover {
+    tr:nth-child(even) {
       background-color: #fafafa;
     }
-    .no-results {
-      text-align: center;
-      color: #888;
-      margin-top: 20px;
+    tr:hover {
+      background-color: #eaeaea;
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .btn-voltar {
+      background-color: #003D7C;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: auto;
+      min-width: 180px;
+    }
+    .btn-voltar:hover {
+      background-color: #002a54;
     }
   </style>
 </head>
 <body>
   <div class="form-container">
     <h2>Relatório de Alunos Cadastrados</h2>
-    <div class="filters">
-      <input type="text" id="filtroNome" placeholder="Buscar por nome">
-      <input type="text" id="filtroCurso" placeholder="Curso">
-      <input type="text" id="filtroUnidade" placeholder="Unidade">
-      <select id="filtroPeriodo">
-        <option value="">Todos os períodos</option>
-        <option value="1º Semestre">1º Semestre</option>
-        <option value="2º Semestre">2º Semestre</option>
-      </select>
-      <button onclick="filtrarAlunos()">Filtrar</button>
-      <button class="btn-voltar" onclick="location.href='/dashboard'">⬅ Voltar ao Dashboard</button>
-    </div>
-    <table id="tabelaAlunos">
+
+    <table>
       <thead>
         <tr>
           <th>ID</th>
           <th>Nome</th>
           <th>Curso</th>
           <th>Unidade</th>
-          <th>Período</th>
-          <th>Data Elaboração</th>
-          <th>Responsável</th>
+          <th>Data de Elaboração</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="lista-alunos">
+        <tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>
+      </tbody>
     </table>
-    <p id="msgNoResults" class="no-results"></p>
+
+    <!-- Botão Voltar -->
+    <div class="button-group">
+      <a href="/dashboard" style="text-decoration: none;">
+        <button class="btn-voltar">← Voltar ao Dashboard</button>
+      </a>
+    </div>
   </div>
 
   <script>
-    async function filtrarAlunos() {
-      const nome = document.getElementById("filtroNome").value.trim();
-      const curso = document.getElementById("filtroCurso").value.trim();
-      const unidade = document.getElementById("filtroUnidade").value.trim();
-      const periodo = document.getElementById("filtroPeriodo").value;
-
-      const params = new URLSearchParams();
-      if (nome) params.append("nome", nome);
-      if (curso) params.append("curso", curso);
-      if (unidade) params.append("unidade", unidade);
-      if (periodo) params.append("periodo", periodo);
-
-      const res = await fetch(`/api/alunos?${params}`);
+    async function carregarRelatorio() {
+      const tbody = document.getElementById("lista-alunos");
+      const res = await fetch("/api/relatorios");
       const alunos = await res.json();
-
-      const tbody = document.querySelector("#tabelaAlunos tbody");
-      const msgEl = document.getElementById("msgNoResults");
-      tbody.innerHTML = "";
-
       if (!alunos.length) {
-        msgEl.innerText = "Nenhum aluno encontrado com os critérios informados.";
+        tbody.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado ainda.</td></tr>";
         return;
       }
 
-      msgEl.innerText = "";
-      alunos.forEach(a => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${a.id}</td>
-            <td>${a.nome}</td>
-            <td>${a.curso || '-'}</td>
-            <td>${a.unidade || '-'}</td>
-            <td>${a.periodo || '-'}</td>
-            <td>${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : '-'}</td>
-            <td>${a.responsavel || '-'}</td>
-          </tr>`;
-      });
+      tbody.innerHTML = alunos.map(a => `
+        <tr onclick="location.href='/cadastro?id=${a.id}'">
+          <td>${a.id}</td>
+          <td>${a.nome}</td>
+          <td>${a.curso || 'Não informado'}</td>
+          <td>${a.unidade || 'Não informado'}</td>
+          <td>${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A'}</td>
+        </tr>
+      `).join("");
     }
 
-    // Carrega todos os alunos ao abrir a página
-    window.onload = filtrarAlunos;
+    window.onload = carregarRelatorio;
   </script>
 </body>
 </html>
