@@ -15,7 +15,7 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C; 
+      color: #003D7C;   
       text-align: center;
       margin-bottom: 20px;
     }
@@ -25,6 +25,18 @@
       border: 1px solid #ccc;
       border-radius: 6px;
       margin-bottom: 20px;
+    }
+    button {
+      background-color: #F7931E;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #e67e22;
     }
     .resultados {
       margin-top: 30px;
@@ -97,7 +109,7 @@
 
         alunos.forEach(aluno => {
           resultadosDiv.innerHTML += `
-            <div class="card-historico" onclick="location.href='/cadastro'">
+            <div class="card-historico" onclick="location.href='/cadastro?id=${aluno.id}'">
               <strong>Nome:</strong> ${aluno.nome}<br>
               <strong>Curso:</strong> ${aluno.curso || 'Não informado'}<br>
               <strong>Unidade:</strong> ${aluno.unidade || 'Não informada'}<br>
