@@ -15,7 +15,7 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C;   
+      color: #003D7C; 
       text-align: center;
       margin-bottom: 20px;
     }
@@ -34,7 +34,6 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
-
     .button-group {
       display: flex;
       justify-content: center;
@@ -61,37 +60,44 @@
   <div class="form-container">
     <h2>Histórico de Alterações</h2>
 
-    <div class="historico-area" id="historicoArea">
-      <!-- Histórico será carregado aqui via JS -->
-    </div>
+    <div class="historico-area" id="historicoArea"></div>
 
     <!-- Botão Voltar -->
     <div class="button-group">
       <a href="/dashboard" style="text-decoration: none;">
-        <button class="btn-voltar">
-          ← Voltar ao Dashboard
-        </button>
+        <button class="btn-voltar">← Voltar ao Dashboard</button>
       </a>
     </div>
   </div>
 
   <script>
-    // Simulação de carregamento (substitua pela API real quando disponível)
-    window.onload = () => {
-      const historicoArea = document.getElementById('historicoArea');
-      historicoArea.innerHTML = `
-        <div class="card-historico">
-          <strong>Data:</strong> 10/04/2025<br>
-          <strong>Autor:</strong> admin<br>
-          <strong>Descrição:</strong> Edição realizada no histórico do aluno João da Silva.
-        </div>
-        <div class="card-historico">
-          <strong>Data:</strong> 05/04/2025<br>
-          <strong>Autor:</strong> mediador<br>
-          <strong>Descrição:</strong> Cadastro inicial realizado.
-        </div>
-      `;
-    };
+    async function carregarHistorico() {
+      try {
+        const res = await fetch("/api/historico");
+        const historico = await res.json();
+
+        const historicoArea = document.getElementById("historicoArea");
+        if (!historico.length) {
+          historicoArea.innerHTML = "<p>Nenhum histórico encontrado.</p>";
+          return;
+        }
+
+        historicoArea.innerHTML = '';
+        historico.forEach(h => {
+          historicoArea.innerHTML += `
+            <div class="card-historico">
+              <strong>Data:</strong> ${new Date(h.data_edicao).toLocaleDateString()}<br>
+              <strong>Autor:</strong> ${h.usuario}<br>
+              <strong>Descrição:</strong> Edição realizada.
+            </div>`;
+        });
+      } catch (err) {
+        console.error("Erro ao carregar histórico:", err);
+        document.getElementById("historicoArea").innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
+      }
+    }
+
+    window.onload = carregarHistorico;
   </script>
 </body>
 </html>
