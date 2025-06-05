@@ -60,7 +60,9 @@
   <div class="form-container">
     <h2>Histórico de Alterações</h2>
 
-    <div class="historico-area" id="historicoArea"></div>
+    <div class="historico-area" id="historicoArea">
+      <!-- Histórico será carregado aqui via JS -->
+    </div>
 
     <!-- Botão Voltar -->
     <div class="button-group">
@@ -84,9 +86,10 @@
 
         historicoArea.innerHTML = '';
         historico.forEach(h => {
+          const dataFormatada = new Date(h.data_edicao).toLocaleDateString();
           historicoArea.innerHTML += `
             <div class="card-historico">
-              <strong>Data:</strong> ${new Date(h.data_edicao).toLocaleDateString()}<br>
+              <strong>Data:</strong> ${dataFormatada}<br>
               <strong>Autor:</strong> ${h.usuario}<br>
               <strong>Descrição:</strong> Edição realizada.
             </div>`;
