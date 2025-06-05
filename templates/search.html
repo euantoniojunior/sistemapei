@@ -15,7 +15,7 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C;  
+      color: #003D7C;   
       text-align: center;
       margin-bottom: 20px;
     }
@@ -68,6 +68,16 @@
     #msg.red {
       color: red;
     }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .button-group button {
+      width: auto;
+      min-width: 140px;
+    }
   </style>
 </head>
 <body>
@@ -77,6 +87,13 @@
     <button onclick="buscarAluno()">Buscar</button>
     <p id="msg"></p>
     <div class="resultados" id="resultados"></div>
+
+    <!-- Botão Voltar -->
+    <div class="button-group">
+      <a href="/dashboard" style="text-decoration: none;">
+        <button>Voltar ao Dashboard</button>
+      </a>
+    </div>
   </div>
 
   <script>
@@ -116,7 +133,6 @@
               <strong>Data de Elaboração:</strong> ${aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : 'N/A'}
             </div>`;
         });
-
       } catch (err) {
         console.error("Erro ao buscar aluno:", err);
         msgEl.innerText = "❌ Erro ao buscar aluno.";
