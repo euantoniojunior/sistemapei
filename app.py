@@ -70,6 +70,11 @@ def dashboard_page():
 def cadastro_page():
     return render_template('cadastro.html')
 
+@app.route('/visualizar/pei/<int:pei_id>')
+@login_required
+def visualizar_pei(pei_id):
+    return render_template('preview_versao.html', id=pei_id)
+
 @app.route('/search')
 @login_required
 def search_page():
