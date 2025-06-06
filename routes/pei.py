@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, render_template_string, session
-from models.models import Student, PEI, PEIHistory, User
+from flask import Blueprint, request, jsonify, render_template_string
+from models.models import Student, PEI
 from database.connection import db
 import pdfkit
 import json
@@ -40,7 +40,7 @@ def criar_pei():
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
 
-            # Atualiza apenas campos editáveis
+            # Atualiza campos editáveis
             aluno.data_nascimento = parse_date(aluno_data.get('data_nascimento'))
             aluno.idade = aluno_data.get('idade')
             aluno.diagnostico_cid = aluno_data.get('diagnostico_cid')
@@ -112,7 +112,6 @@ def criar_pei():
         db.session.add(historico)
 
         db.session.commit()
-
         return jsonify({
             "message": "✅ Cadastro salvo com sucesso!",
             "student_id": aluno.id,
@@ -128,7 +127,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por ID (para edição no cadastro)
+# ✅ Nova rota: Buscar aluno por ID (para edição)
 @pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
 def buscar_aluno_por_id(student_id):
     aluno = Student.query.get(student_id)
@@ -161,7 +160,7 @@ def buscar_aluno_por_id(student_id):
     return jsonify(aluno_dict), 200
 
 
-# ✅ Nova rota: Buscar aluno por nome (usada na search.html e historico.html)
+# ✅ Nova rota: Busca alunos por nome (usada na search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -199,39 +198,7 @@ def buscar_alunos():
     } for a in alunos])
 
 
-# ✅ Nova rota: Buscar histórico específico de um aluno
-@pei_bp.route('/api/historico/aluno/<int:student_id>', methods=['GET'])
-def get_historico_aluno(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    historico = PEIHistory.query.filter_by(pei_id=aluno.id).all()
-    return jsonify([{
-        'id': h.id,
-        'pei_id': h.pei_id,
-        'usuario': User.query.get(h.editado_por).username if h.editado_por else "Desconhecido",
-        'data_edicao': h.data_edicao.isoformat(),
-        'conteudo_anterior': h.conteudo_anterior,
-        'conteudo_novo': h.conteudo_novo
-    } for h in historico]), 200
-
-
-# ✅ Nova rota: Buscar histórico geral de edições
-@pei_bp.route('/api/historico', methods=['GET'])
-def get_historico():
-    historico = PEIHistory.query.order_by(PEIHistory.data_edicao.desc()).all()
-    return jsonify([{
-        'id': h.id,
-        'pei_id': h.pei_id,
-        'usuario': User.query.get(h.editado_por).username if h.editado_por else "Desconhecido",
-        'data_edicao': h.data_edicao.isoformat(),
-        'conteudo_anterior': h.conteudo_anterior,
-        'conteudo_novo': h.conteudo_novo
-    } for h in historico]), 200
-
-
-# ✅ Nova rota: Buscar uma versão específica do PEI
+# ✅ Nova rota: Buscar versão específica do PEI
 @pei_bp.route('/api/pei/<int:pei_id>', methods=['GET'])
 def get_pei_by_id(pei_id):
     pei = PEI.query.get(pei_id)
@@ -255,7 +222,7 @@ def get_pei_by_id(pei_id):
     }), 200
 
 
-# ✅ Nova rota: Gerar PDF do PEI
+# ✅ Nova rota: Exportar como PDF
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
