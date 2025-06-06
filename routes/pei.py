@@ -159,7 +159,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por nome (usada na search.html)
+# ✅ Nova rota: Buscar aluno por nome (usada na search.html e historico.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -198,13 +198,10 @@ def buscar_alunos():
 
 
 # ✅ Nova rota: Buscar aluno por ID (para edição)
-@pei_bp.route('/api/alunos', methods=['GET'])
-def buscar_aluno_por_id():
-    student_id = request.args.get('id')
-    if not student_id or not student_id.isdigit():
-        return jsonify({"error": "ID do aluno inválido"}), 400
 
-    aluno = Student.query.get(int(student_id))
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
+    aluno = Student.query.get(student_id)
     if not aluno:
         return jsonify({"error": "Aluno não encontrado"}), 404
 
@@ -232,7 +229,6 @@ def buscar_aluno_por_id():
             print("Erro ao processar conteúdo do PEI:", e)
 
     return jsonify(aluno_dict), 200
-
 
 # ✅ Nova rota: Retornar dados de uma versão específica do PEI
 @pei_bp.route('/api/pei/<int:pei_id>', methods=['GET'])
