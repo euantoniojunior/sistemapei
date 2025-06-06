@@ -94,7 +94,6 @@
   </div>
   <p><strong>Transtorno identificado:</strong> <span id="transtorno_identificado"></span></p>
   <p><strong>Laudo Médico:</strong> <span id="laudo_medico"></span></p>
-
   <p><strong>Psicólogo:</strong> <span id="psicologo"></span></p>
   <p><strong>Psiquiatra:</strong> <span id="psiquiatra"></span></p>
   <p><strong>Psicopedagogo:</strong> <span id="psicopedagogo"></span></p>
@@ -114,10 +113,30 @@
 
   <h2>6. Metas Individuais</h2>
   <table>
-    <tr><th>Período</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
-    <tr><td>Curto prazo</td><td id="meta_curto_prazo"></td><td id="responsavel_curto"></td><td id="avaliacao_curto"></td></tr>
-    <tr><td>Médio prazo</td><td id="meta_medio_prazo"></td><td id="responsavel_medio"></td><td id="avaliacao_medio"></td></tr>
-    <tr><td>Longo prazo</td><td id="meta_longo_prazo"></td><td id="responsavel_longo"></td><td id="avaliacao_longo"></td></tr>
+    <tr>
+      <th>Período</th>
+      <th>Meta</th>
+      <th>Responsável</th>
+      <th>Avaliação</th>
+    </tr>
+    <tr>
+      <td>Curto prazo</td>
+      <td id="meta_curto_prazo"></td>
+      <td id="responsavel_curto"></td>
+      <td id="avaliacao_curto"></td>
+    </tr>
+    <tr>
+      <td>Médio prazo</td>
+      <td id="meta_medio_prazo"></td>
+      <td id="responsavel_medio"></td>
+      <td id="avaliacao_medio"></td>
+    </tr>
+    <tr>
+      <td>Longo prazo</td>
+      <td id="meta_longo_prazo"></td>
+      <td id="responsavel_longo"></td>
+      <td id="avaliacao_longo"></td>
+    </tr>
   </table>
 
   <h2>7. Acompanhamento e Revisão do PEI</h2>
@@ -154,8 +173,9 @@
 
   <script>
     const dados = JSON.parse(localStorage.getItem("peiPreview"));
+    const conteudo = JSON.parse(localStorage.getItem("peiConteudo"));
 
-    if (!dados) {
+    if (!dados && !conteudo) {
       document.body.innerHTML = "<h2>⚠️ Nenhum dado encontrado. Volte ao cadastro.</h2>";
     } else {
       document.getElementById("nome").textContent = dados.nome;
@@ -174,20 +194,20 @@
       document.getElementById("psicopedagogo").textContent = dados.psicopedagogo;
       document.getElementById("outros_profissionais").textContent = dados.outros_profissionais;
       document.getElementById("perfil_aluno").textContent = dados.perfil_aluno;
-      document.getElementById("objetivos_gerais").textContent = dados.objetivos_gerais;
-      document.getElementById("adaptaçoes_pedagogicas").textContent = dados.adaptaçoes_pedagogicas;
-      document.getElementById("intervencoes_complementares").textContent = dados.intervencoes_complementares;
-      document.getElementById("meta_curto_prazo").textContent = dados.meta_curto_prazo;
-      document.getElementById("responsavel_curto").textContent = dados.responsavel_curto;
-      document.getElementById("avaliacao_curto").textContent = dados.avaliacao_curto;
-      document.getElementById("meta_medio_prazo").textContent = dados.meta_medio_prazo;
-      document.getElementById("responsavel_medio").textContent = dados.responsavel_medio;
-      document.getElementById("avaliacao_medio").textContent = dados.avaliacao_medio;
-      document.getElementById("meta_longo_prazo").textContent = dados.meta_longo_prazo;
-      document.getElementById("responsavel_longo").textContent = dados.responsavel_longo;
-      document.getElementById("avaliacao_longo").textContent = dados.avaliacao_longo;
+      document.getElementById("objetivos_gerais").textContent = conteudo?.objetivos_gerais || "N/A";
+      document.getElementById("adaptaçoes_pedagogicas").textContent = conteudo?.adaptaçoes_pedagogicas || "N/A";
+      document.getElementById("intervencoes_complementares").textContent = conteudo?.intervencoes_complementares || "N/A";
+      document.getElementById("meta_curto_prazo").textContent = conteudo?.metas?.curto_prazo?.meta || "N/A";
+      document.getElementById("responsavel_curto").textContent = conteudo?.metas?.curto_prazo?.responsavel || "N/A";
+      document.getElementById("avaliacao_curto").textContent = conteudo?.metas?.curto_prazo?.avaliacao || "N/A";
+      document.getElementById("meta_medio_prazo").textContent = conteudo?.metas?.medio_prazo?.meta || "N/A";
+      document.getElementById("responsavel_medio").textContent = conteudo?.metas?.medio_prazo?.responsavel || "N/A";
+      document.getElementById("avaliacao_medio").textContent = conteudo?.metas?.medio_prazo?.avaliacao || "N/A";
+      document.getElementById("meta_longo_prazo").textContent = conteudo?.metas?.longo_prazo?.meta || "N/A";
+      document.getElementById("responsavel_longo").textContent = conteudo?.metas?.longo_prazo?.responsavel || "N/A";
+      document.getElementById("avaliacao_longo").textContent = conteudo?.metas?.longo_prazo?.avaliacao || "N/A";
       document.getElementById("observacoes_gerais").textContent = dados.observacoes_gerais;
-      document.getElementById("proxima_avaliacao").textContent = dados.proxima_avaliacao;
+      document.getElementById("proxima_avaliacao").textContent = dados.proxima_avaliacao ? new Date(dados.proxima_avaliacao).toLocaleDateString() : "N/A";
       document.getElementById("responsavel_legal").textContent = dados.responsavel_legal;
       document.getElementById("orientador_responsavel").textContent = dados.orientador_responsavel;
       document.getElementById("supervisor").textContent = dados.supervisor;
@@ -217,53 +237,30 @@
             .assinatura div { width: 45%; text-align: center; margin: 10px 0; }
           </style>
         </head>
-        <body>
-          ${document.body.innerHTML.replace('<div class="actions">', '<div style="display:none;">')}
-        </body>
-      </html>
-      `;
-      const pdf = await window.pdfWorker.generate(htmlContent);
-      return pdf;
-    }
-
-    // Carrega o pdfkit no browser via worker
-    window.pdfWorker = {
-      generate: (html) => {
-        return new Promise((resolve) => {
-          const iframe = document.createElement("iframe");
-          iframe.style.display = "none";
-          document.body.appendChild(iframe);
-
-          const doc = iframe.contentDocument;
-          doc.open();
-          doc.write(`
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"><\/script> 
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"><\/script> 
-            <script>
-              document.addEventListener("DOMContentLoaded", () => {
-                const opt = {
-                  margin:       1,
-                  filename:     'PEI.pdf',
-                  image:        { type: 'jpeg', quality: 0.98 },
-                  html2canvas:  { scale: 2 },
-                  jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                html2pdf().set(opt).fromString(\`${html}\`).outputPdf('blob').then(pdfBlob => {
-                  window.parent.postMessage({ pdf: pdfBlob }, '*');
-                });
-              });
-            <\/script>
-          `);
-          doc.close();
-
-          window.addEventListener("message", function(e) {
-            if (e.data && e.data.pdf) {
-              resolve(e.data.pdf);
-            }
-          }, { once: true });
+        <body>${document.body.innerHTML.replace('<div class="actions">', '<div style="display:none;">')}</body>
+      </html>`;
+      return new Promise((resolve) => {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+        doc.addEventListener("load", () => {
+          const opt = {
+            margin: 1,
+            filename: 'PEI.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          html2pdf().set(opt).from(doc.body).save().then(() => {
+            resolve(html2pdf().output('blob'));
+          });
         });
-      }
-    };
+      });
+    }
   </script>
 </body>
 </html>
