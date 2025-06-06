@@ -23,7 +23,6 @@ def parse_date(date_str):
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        # Verifica o tipo de conteúdo
         if request.content_type.startswith('application/json'):
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -32,7 +31,7 @@ def criar_pei():
             aluno_data = json.loads(request.form.get('aluno'))
             conteudo_data = json.loads(request.form.get('conteudo'))
 
-        # Valida campos obrigatórios
+        # Validação dos campos obrigatórios
         campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
         faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
         if faltando:
@@ -42,21 +41,13 @@ def criar_pei():
             }), 400
 
         student_id = aluno_data.get('id')
-        aluno = None
-        conteudo_anterior = '{}'
 
-        # Se tem ID, é uma edição
+        # Se tiver ID, é uma edição
         if student_id and str(student_id).isdigit():
             aluno = Student.query.get(int(student_id))
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
-
-            # Busca último conteúdo para histórico
-            pei_anterior = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
-            if pei_anterior:
-                conteudo_anterior = pei_anterior.conteudo
-
-            # Atualiza dados do aluno
+            # Atualiza dados existentes
             aluno.nome = aluno_data.get('nome')
             aluno.curso = aluno_data.get('curso')
             aluno.unidade = aluno_data.get('unidade')
@@ -80,7 +71,29 @@ def criar_pei():
             aluno.supervisor = aluno_data.get('supervisor')
             aluno.gerente_unidade = aluno_data.get('gerente_unidade')
 
-            db.session.flush()
+            # Upload do arquivo do laudo médico (opcional)
+            if 'laudo_medico_arquivo' in request.files:
+                file = request.files['laudo_medico_arquivo']
+                if file.filename != '':
+                    filename = secure_filename(file.filename)
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    aluno.laudo_medico_arquivo = filename
+
+            # Salva o conteúdo do PEI como JSON
+            pei = PEI(
+                student_id=aluno.id,
+                conteudo=json.dumps(conteudo_data, ensure_ascii=False)
+            )
+            db.session.add(pei)
+
+            # Registra histórico da alteração
+            historico = PEIHistory(
+                pei_id=pei.id,
+                editado_por=request.args.get('user_id') or session.get('user_id') or 1,
+                conteudo_anterior=json.dumps(json.loads(pei.conteudo), ensure_ascii=False) if pei.conteudo else '{}',
+                conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
+            )
+            db.session.add(historico)
 
         else:
             # É novo cadastro
@@ -111,32 +124,31 @@ def criar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-        # Upload do arquivo do laudo médico (opcional)
-        if 'laudo_medico_arquivo' in request.files:
-            file = request.files['laudo_medico_arquivo']
-            if file.filename != '':
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                aluno.laudo_medico_arquivo = filename
+            # Upload do laudo médico (opcional)
+            if 'laudo_medico_arquivo' in request.files:
+                file = request.files['laudo_medico_arquivo']
+                if file.filename != '':
+                    filename = secure_filename(file.filename)
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    aluno.laudo_medico_arquivo = filename
 
-        # Salva o conteúdo do PEI como JSON
-        pei = PEI(
-            student_id=aluno.id,
-            conteudo=json.dumps(conteudo_data, ensure_ascii=False)
-        )
-        db.session.add(pei)
+            # Salva o conteúdo do PEI como JSON
+            pei = PEI(
+                student_id=aluno.id,
+                conteudo=json.dumps(conteudo_data, ensure_ascii=False)
+            )
+            db.session.add(pei)
 
-        # Registra histórico da alteração
-        historico = PEIHistory(
-            pei_id=pei.id,
-            editado_por=request.args.get('user_id') or session.get('user_id') or 1,
-            conteudo_anterior=conteudo_anterior,
-            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
-        )
-        db.session.add(historico)
+            # Registra histórico da alteração
+            historico = PEIHistory(
+                pei_id=pei.id,
+                editado_por=session.get('user_id') or 1,
+                conteudo_anterior="{}",
+                conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
+            )
+            db.session.add(historico)
 
         db.session.commit()
-
         return jsonify({
             "message": "✅ Cadastro salvo com sucesso!",
             "student_id": aluno.id,
