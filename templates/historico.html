@@ -15,15 +15,14 @@
       padding: 30px;
     }
     h2 {
-      color: #003D7C; 
+      color: #003D7C;   
       text-align: center;
       margin-bottom: 20px;
     }
     .card-historico {
-      background: #fef8ec;
-      border: 1px solid #eee;
-      border-left: 5px solid #F7931E;
+      background: #f5f5f5;
       padding: 15px;
+      border-left: 5px solid #F7931E;
       border-radius: 8px;
       margin-top: 10px;
       cursor: pointer;
@@ -47,7 +46,6 @@
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
       width: auto;
       min-width: 180px;
     }
@@ -60,10 +58,9 @@
   <div class="form-container">
     <h2>Histórico de Alterações</h2>
 
-    <input type="text" id="studentName" placeholder="Digite o nome do aluno">
-    <button onclick="buscarAluno()">Buscar</button>
-
-    <div class="historico-area" id="historicoArea"></div>
+    <div class="historico-area" id="historicoArea">
+      <!-- Histórico será carregado aqui via JS -->
+    </div>
 
     <!-- Botão Voltar -->
     <div class="button-group">
@@ -74,54 +71,34 @@
   </div>
 
   <script>
-    async function buscarAluno() {
-      const studentName = document.getElementById('studentName').value.trim();
-      const resultadosDiv = document.getElementById('historicoArea');
-
-      if (!studentName) {
-        resultadosDiv.innerHTML = "<p>⚠️ Digite um nome válido.</p>";
-        return;
-      }
-
+    // Carrega o histórico ao abrir a página
+    window.onload = async () => {
+      const historicoArea = document.getElementById("historicoArea");
       try {
-        const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
-        const alunos = await res.json();
+        const res = await fetch("/api/historico");
+        const historico = await res.json();
 
-        if (!alunos.length) {
-          resultadosDiv.innerHTML = "<p>Nenhum aluno encontrado.</p>";
+        if (!historico.length) {
+          historicoArea.innerHTML = "<p>Nenhum histórico encontrado.</p>";
           return;
         }
 
-        resultadosDiv.innerHTML = '';
+        historicoArea.innerHTML = '';
+        historico.forEach(h => {
+          const dataFormatada = new Date(h.data_edicao).toLocaleDateString();
+          historicoArea.innerHTML += `
+            <div class="card-historico" onclick="location.href='/cadastro?id=${h.pei_id}'">
+              <strong>ID do Aluno:</strong> ${h.pei_id}<br>
+              <strong>Data da Edição:</strong> ${dataFormatada}<br>
+              <strong>Autor:</strong> ${h.usuario}
+            </div>`;
+        });
 
-        for (const aluno of alunos) {
-          const histRes = await fetch("/api/historico");
-          const historico = await histRes.json();
-
-          const historicoDoAluno = historico.find(h => h.pei_id === aluno.id);
-
-          if (historicoDoAluno) {
-            const dataFormatada = new Date(historicoDoAluno.data_edicao).toLocaleDateString();
-            resultadosDiv.innerHTML += `
-              <div class="card-historico">
-                <strong>${aluno.nome}</strong><br>
-                <strong>Data:</strong> ${dataFormatada}<br>
-                <strong>Autor:</strong> ${historicoDoAluno.usuario}
-              </div>`;
-          } else {
-            resultadosDiv.innerHTML += `
-              <div class="card-historico">
-                <strong>${aluno.nome}</strong><br>
-                <strong>Data:</strong> N/A<br>
-                <strong>Autor:</strong> N/A
-              </div>`;
-          }
-        }
       } catch (err) {
         console.error("Erro ao carregar histórico:", err);
-        resultadosDiv.innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
+        historicoArea.innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
       }
-    }
+    };
   </script>
 </body>
 </html>
