@@ -117,12 +117,15 @@
 <div class="form-container">
   <h2>Plano Educacional Individualizado (PEI)</h2>
 
+  <!-- Campo oculto para armazenar o ID -->
+  <input type="hidden" id="id">
+
   <!-- Formulário -->
   <form id="peiForm">
     <!-- Dados do Aluno -->
     <label for="nome">Nome do Aluno:</label>
     <input type="text" name="nome" id="nome" required>
-    
+
     <div class="grid-2">
       <input type="text" name="curso" id="curso" placeholder="Curso Técnico" required>
       <input type="text" name="unidade" id="unidade" placeholder="Unidade SENAC" required>
@@ -267,6 +270,7 @@
 
       // Coleta dados do aluno
       alunoData = {
+        id: document.getElementById("id").value || null,
         nome: nome.value.trim(),
         curso: curso.value.trim(),
         unidade: unidade.value.trim(),
@@ -326,7 +330,9 @@
 
         if (res.ok) {
           msgEl.style.color = "green";
-          msgEl.innerText = "✅ PEI salvo com sucesso!";
+          msgEl.innerText = data.tipo === "edição"
+            ? "✅ Cadastro atualizado com sucesso!"
+            : "🆕 Novo cadastro criado!";
           bloquearCampos(true);
           ocultarBotoesIniciais();
           mostrarBotoesPosSalvar();
@@ -342,56 +348,15 @@
     });
   }
 
-  // Função chamada ao clicar em Finalizar Cadastro
-  function finalizarCadastro() {
-    if (!alunoData.nome) {
-      alert("⚠️ Salve o cadastro antes de finalizar.");
-      return;
+  // Função chamada ao carregar a página com ?id=
+  window.onload = () => {
+    const studentId = getStudentIdFromURL();
+    if (studentId) {
+      carregarAluno(studentId);
+    } else {
+      limparCampos();
     }
-    localStorage.setItem("peiPreview", JSON.stringify(alunoData));
-    localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
-    window.open('/preview', '_blank');
-    alert("✅ Cadastro finalizado. Visualize-o na nova aba.");
-  }
-
-  function bloquearCampos(bloquear = true) {
-    Array.from(form.elements).forEach(el => {
-      if (el.type !== 'button') el.readOnly = bloquear;
-    });
-  }
-
-  function limparCampos() {
-    form.reset();
-    msgEl.innerText = "";
-    alunoData = {};
-    conteudoData = {};
-    mostrarBotoesIniciais();
-    ocultarBotoesPosSalvar();
-  }
-
-  function editarCampos() {
-    bloquearCampos(false);
-    ocultarBotoesPosSalvar();
-    mostrarBotoesIniciais();
-    msgEl.style.color = "green";
-    msgEl.innerText = "Você está editando o cadastro.";
-  }
-
-  function mostrarBotoesIniciais() {
-    document.getElementById("botoes-iniciais").style.display = "flex";
-  }
-
-  function ocultarBotoesIniciais() {
-    document.getElementById("botoes-iniciais").style.display = "none";
-  }
-
-  function mostrarBotoesPosSalvar() {
-    document.getElementById("botoes-pos-salvar").style.display = "flex";
-  }
-
-  function ocultarBotoesPosSalvar() {
-    document.getElementById("botoes-pos-salvar").style.display = "none";
-  }
+  };
 
   // Função para extrair o ID da URL
   function getStudentIdFromURL() {
@@ -406,6 +371,7 @@
       if (!res.ok) throw new Error("Erro ao carregar aluno");
       const aluno = await res.json();
 
+      document.getElementById("id").value = aluno.id;
       document.getElementById("nome").value = aluno.nome || "";
       document.getElementById("curso").value = aluno.curso || "";
       document.getElementById("unidade").value = aluno.unidade || "";
@@ -454,15 +420,55 @@
     }
   }
 
-  // Executa ao carregar a página
-  window.onload = () => {
-    const studentId = getStudentIdFromURL();
-    if (studentId) {
-      carregarAluno(studentId);
-    } else {
-      limparCampos();
+  function bloquearCampos(bloquear = true) {
+    Array.from(form.elements).forEach(el => {
+      if (el.type !== 'button') el.readOnly = bloquear;
+    });
+  }
+
+  function limparCampos() {
+    form.reset();
+    msgEl.innerText = "";
+    alunoData = {};
+    conteudoData = {};
+    mostrarBotoesIniciais();
+    ocultarBotoesPosSalvar();
+  }
+
+  function editarCampos() {
+    bloquearCampos(false);
+    ocultarBotoesPosSalvar();
+    mostrarBotoesIniciais();
+    msgEl.innerText = "Você está editando o cadastro.";
+    msgEl.style.color = "green";
+  }
+
+  function mostrarBotoesIniciais() {
+    document.getElementById("botoes-iniciais").style.display = "flex";
+  }
+
+  function ocultarBotoesIniciais() {
+    document.getElementById("botoes-iniciais").style.display = "none";
+  }
+
+  function mostrarBotoesPosSalvar() {
+    document.getElementById("botoes-pos-salvar").style.display = "flex";
+  }
+
+  function ocultarBotoesPosSalvar() {
+    document.getElementById("botoes-pos-salvar").style.display = "none";
+  }
+
+  function finalizarCadastro() {
+    if (!alunoData.nome) {
+      alert("⚠️ Salve o cadastro antes de finalizar.");
+      return;
     }
-  };
+    localStorage.setItem("peiPreview", JSON.stringify(alunoData));
+    localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
+    window.open('/preview', '_blank');
+    alert("✅ Cadastro finalizado. Visualize-o na nova aba.");
+  }
 </script>
 </body>
 </html>
