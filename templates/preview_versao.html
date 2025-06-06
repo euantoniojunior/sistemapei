@@ -69,11 +69,8 @@
     .btn-voltar {
       background-color: #003D7C;
     }
-    .btn-imprimir:hover {
-      background-color: #2980b9;
-    }
-    .btn-voltar:hover {
-      background-color: #002a54;
+    .btn-imprimir:hover, .btn-voltar:hover {
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -84,7 +81,7 @@
   <p><strong>Nome:</strong> <span id="nome"></span></p>
   <div style="display:flex; gap: 20px;">
     <p><strong>Curso Técnico:</strong> <span id="curso"></span></p>
-    <p><strong>Unidade SENAC:</strong> <span id="unidade"></span></p>
+    <p><strong>Unidade:</strong> <span id="unidade"></span></p>
     <p><strong>Período Letivo:</strong> <span id="periodo"></span></p>
   </div>
   <div style="display:flex; gap: 20px;">
@@ -174,12 +171,12 @@
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const peiId = urlParams.get('id');
+    const pei_id = urlParams.get('id');
 
-    if (!peiId) {
+    if (!pei_id) {
       document.body.innerHTML = "<h2>⚠️ Nenhuma versão selecionada.</h2>";
     } else {
-      fetch(`/api/pei/${peiId}`)
+      fetch(`/api/pei/${pei_id}`)
         .then(res => res.json())
         .then(data => {
           const aluno = data.aluno;
@@ -191,6 +188,7 @@
           document.getElementById("periodo").textContent = aluno.periodo || "N/A";
           document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
           document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
+
           document.getElementById("data_nascimento").textContent = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString() : "N/A";
           document.getElementById("idade").textContent = aluno.idade || "N/A";
           document.getElementById("diagnostico_cid").textContent = aluno.diagnostico_cid || "N/A";
@@ -200,24 +198,22 @@
           document.getElementById("psiquiatra").textContent = aluno.psiquiatra || "N/A";
           document.getElementById("psicopedagogo").textContent = aluno.psicopedagogo || "N/A";
           document.getElementById("outros_profissionais").textContent = aluno.outros_profissionais || "N/A";
-
-          // Conteúdo do PEI
           document.getElementById("perfil_aluno").textContent = aluno.perfil_aluno || "N/A";
           document.getElementById("objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
           document.getElementById("adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
           document.getElementById("intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
 
-          document.getElementById("meta_curto_prazo").textContent = (conteudo.metas?.curto_prazo?.meta) || "N/A";
-          document.getElementById("responsavel_curto").textContent = (conteudo.metas?.curto_prazo?.responsavel) || "N/A";
-          document.getElementById("avaliacao_curto").textContent = (conteudo.metas?.curto_prazo?.avaliacao) || "N/A";
+          document.getElementById("meta_curto_prazo").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.meta) || "N/A";
+          document.getElementById("responsavel_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.responsavel) || "N/A";
+          document.getElementById("avaliacao_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.avaliacao) || "N/A";
 
-          document.getElementById("meta_medio_prazo").textContent = (conteudo.metas?.medio_prazo?.meta) || "N/A";
-          document.getElementById("responsavel_medio").textContent = (conteudo.metas?.medio_prazo?.responsavel) || "N/A";
-          document.getElementById("avaliacao_medio").textContent = (conteudo.metas?.medio_prazo?.avaliacao) || "N/A";
+          document.getElementById("meta_medio_prazo").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.meta) || "N/A";
+          document.getElementById("responsavel_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.responsavel) || "N/A";
+          document.getElementById("avaliacao_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.avaliacao) || "N/A";
 
-          document.getElementById("meta_longo_prazo").textContent = (conteudo.metas?.longo_prazo?.meta) || "N/A";
-          document.getElementById("responsavel_longo").textContent = (conteudo.metas?.longo_prazo?.responsavel) || "N/A";
-          document.getElementById("avaliacao_longo").textContent = (conteudo.metas?.longo_prazo?.avaliacao) || "N/A";
+          document.getElementById("meta_longo_prazo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.meta) || "N/A";
+          document.getElementById("responsavel_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.responsavel) || "N/A";
+          document.getElementById("avaliacao_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.avaliacao) || "N/A";
 
           document.getElementById("observacoes_gerais").textContent = aluno.observacoes_gerais || "N/A";
           document.getElementById("proxima_avaliacao").textContent = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
