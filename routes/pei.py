@@ -1,13 +1,13 @@
-from flask import Blueprint, request, jsonify, render_template_string
-from models.models import Student, PEI, PEIHistory, User
+from flask import Blueprint, request, jsonify, render_template_string, session
+from models.models import Student, PEI, PEIHistory
 from database.connection import db
+import pdfkit
 import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
 
 pei_bp = Blueprint('pei', __name__)
-
 
 def parse_date(date_str):
     """Converte string de data para objeto date"""
@@ -23,6 +23,7 @@ def parse_date(date_str):
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
+        # Verifica o tipo de conteúdo
         if request.content_type.startswith('application/json'):
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -31,23 +32,15 @@ def criar_pei():
             aluno_data = json.loads(request.form.get('aluno'))
             conteudo_data = json.loads(request.form.get('conteudo'))
 
-        campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
-        faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
-        if faltando:
-            return jsonify({
-                "error": "Campos obrigatórios ausentes",
-                "campos": faltando
-            }), 400
-
         student_id = aluno_data.get('id')
-        aluno = None
-        conteudo_anterior = '{}'
 
+        # Se for edição, atualiza o aluno existente
         if student_id and str(student_id).isdigit():
             aluno = Student.query.get(int(student_id))
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
 
+            # Atualiza os campos do aluno
             aluno.nome = aluno_data.get('nome')
             aluno.curso = aluno_data.get('curso')
             aluno.unidade = aluno_data.get('unidade')
@@ -73,28 +66,8 @@ def criar_pei():
 
             db.session.flush()
 
-            if 'laudo_medico_arquivo' in request.files:
-                file = request.files['laudo_medico_arquivo']
-                if file.filename != '':
-                    filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    aluno.laudo_medico_arquivo = filename
-
-            pei = PEI(
-                student_id=aluno.id,
-                conteudo=json.dumps(conteudo_data, ensure_ascii=False)
-            )
-            db.session.add(pei)
-
-            historico = PEIHistory(
-                pei_id=pei.id,
-                editado_por=request.args.get('user_id') or session.get('user_id') or 1,
-                conteudo_anterior=json.dumps(json.loads(pei.conteudo), ensure_ascii=False) if pei.conteudo else '{}',
-                conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
-            )
-            db.session.add(historico)
-
         else:
+            # Cria novo aluno
             aluno = Student(
                 nome=aluno_data.get('nome'),
                 curso=aluno_data.get('curso'),
@@ -122,33 +95,37 @@ def criar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-            if 'laudo_medico_arquivo' in request.files:
-                file = request.files['laudo_medico_arquivo']
-                if file.filename != '':
-                    filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    aluno.laudo_medico_arquivo = filename
+        # Upload do laudo médico (opcional)
+        if 'laudo_medico_arquivo' in request.files:
+            file = request.files['laudo_medico_arquivo']
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                aluno.laudo_medico_arquivo = filename
 
-            pei = PEI(
-                student_id=aluno.id,
-                conteudo=json.dumps(conteudo_data, ensure_ascii=False)
-            )
-            db.session.add(pei)
+        # Salva o conteúdo do PEI como JSON
+        pei = PEI(
+            student_id=aluno.id,
+            conteudo=json.dumps(conteudo_data, ensure_ascii=False)
+        )
+        db.session.add(pei)
 
-            historico = PEIHistory(
-                pei_id=pei.id,
-                editado_por=session.get('user_id') or 1,
-                conteudo_anterior="{}",
-                conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
-            )
-            db.session.add(historico)
+        # Registra alteração no histórico
+        historico = PEIHistory(
+            pei_id=pei.id,
+            editado_por=session.get('user_id') or 1,
+            conteudo_anterior="{}",
+            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
+        )
+        db.session.add(historico)
 
         db.session.commit()
+
         return jsonify({
             "message": "✅ Cadastro salvo com sucesso!",
             "student_id": aluno.id,
             "tipo": "edição" if student_id else "novo"
-        }), 200
+        }), 201
 
     except Exception as e:
         db.session.rollback()
@@ -159,46 +136,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por nome (usada na search.html e historico.html)
-@pei_bp.route('/api/alunos', methods=['GET'])
-def buscar_alunos():
-    nome = request.args.get('nome')
-    if not nome:
-        return jsonify({"error": "Nome é obrigatório"}), 400
-
-    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
-    if not alunos:
-        return jsonify([])
-
-    return jsonify([{
-        'id': a.id,
-        'nome': a.nome,
-        'curso': a.curso,
-        'unidade': a.unidade,
-        'periodo': a.periodo,
-        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
-        'responsavel': a.responsavel,
-        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else None,
-        'idade': a.idade,
-        'diagnostico_cid': a.diagnostico_cid,
-        'transtorno_identificado': a.transtorno_identificado,
-        'laudo_medico': a.laudo_medico,
-        'psicologo': a.psicologo,
-        'psiquiatra': a.psiquiatra,
-        'psicopedagogo': a.psicopedagogo,
-        'outros_profissionais': a.outros_profissionais,
-        'perfil_aluno': a.perfil_aluno,
-        'observacoes_gerais': a.observacoes_gerais,
-        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else None,
-        'responsavel_legal': a.responsavel_legal,
-        'orientador_responsavel': a.orientador_responsavel,
-        'supervisor': a.supervisor,
-        'gerente_unidade': a.gerente_unidade
-    } for a in alunos])
-
-
 # ✅ Nova rota: Buscar aluno por ID (para edição)
-
 @pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
 def buscar_aluno_por_id(student_id):
     aluno = Student.query.get(student_id)
@@ -230,74 +168,58 @@ def buscar_aluno_por_id(student_id):
 
     return jsonify(aluno_dict), 200
 
-# ✅ Nova rota: Retornar dados de uma versão específica do PEI
-@pei_bp.route('/api/pei/<int:pei_id>', methods=['GET'])
-def get_pei_by_id(pei_id):
-    pei = PEI.query.get(pei_id)
-    if not pei:
-        return jsonify({"error": "PEI não encontrado"}), 404
 
-    aluno = Student.query.get(pei.student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
+# ✅ Rota: Buscar alunos por nome (usada na search.html)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def buscar_alunos():
+    nome = request.args.get('nome')
+    if not nome:
+        return jsonify({"error": "Nome é obrigatório"}), 400
 
-    try:
-        conteudo = json.loads(pei.conteudo)
-    except:
-        return jsonify({"error": "Conteúdo do PEI inválido"}), 500
+    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+    if not alunos:
+        return jsonify([])
 
-    return jsonify({
-        "aluno": aluno.to_dict(),
-        "conteudo": conteudo,
-        "pei_id": pei.id,
-        "data_registro": pei.data_registro.isoformat()
-    }), 200
-
-
-# ✅ Nova rota: Histórico do aluno específico
-@pei_bp.route('/api/historico/aluno/<int:student_id>', methods=['GET'])
-def get_historico_aluno(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    historico = PEIHistory.query.filter_by(pei_id=aluno.id).all()
-    return jsonify([{
-        'id': h.id,
-        'pei_id': h.pei_id,
-        'usuario': User.query.get(h.editado_por).username if h.editado_por else "Desconhecido",
-        'data_edicao': h.data_edicao.isoformat(),
-        'conteudo_anterior': h.conteudo_anterior,
-        'conteudo_novo': h.conteudo_novo
-    } for h in historico]), 200
-
-
-# ✅ Nova rota: Histórico geral
-@pei_bp.route('/api/historico', methods=['GET'])
-def get_historico():
-    historico = PEIHistory.query.order_by(PEIHistory.data_edicao.desc()).all()
-    return jsonify([{
-        'id': h.id,
-        'pei_id': h.pei_id,
-        'usuario': User.query.get(h.editado_por).username if h.editado_por else "Desconhecido",
-        'data_edicao': h.data_edicao.isoformat(),
-        'conteudo_anterior': h.conteudo_anterior,
-        'conteudo_novo': h.conteudo_novo
-    } for h in historico]), 200
-
-
-# ✅ Nova rota: Relatório - todos os alunos
-@pei_bp.route('/api/relatorios', methods=['GET'])
-def relatorio_alunos():
-    alunos = Student.query.all()
     return jsonify([{
         'id': a.id,
         'nome': a.nome,
         'curso': a.curso,
         'unidade': a.unidade,
+        'periodo': a.periodo,
         'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
-        'responsavel': a.responsavel
-    } for a in alunos]), 200
+        'responsavel': a.responsavel,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else None,
+        'idade': a.idade,
+        'diagnostico_cid': a.diagnostico_cid,
+        'transtorno_identificado': a.transtorno_identificado,
+        'laudo_medico': a.laudo_medico,
+        'laudo_medico_arquivo': a.laudo_medico_arquivo,
+        'psicologo': a.psicologo,
+        'psiquiatra': a.psiquiatra,
+        'psicopedagogo': a.psicopedagogo,
+        'outros_profissionais': a.outros_profissionais,
+        'perfil_aluno': a.perfil_aluno,
+        'observacoes_gerais': a.observacoes_gerais,
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else None,
+        'responsavel_legal': a.responsavel_legal,
+        'orientador_responsavel': a.orientador_responsavel,
+        'supervisor': a.supervisor,
+        'gerente_unidade': a.gerente_unidade
+    } for a in alunos])
+
+
+# ✅ Rota: Listar histórico de alterações
+@pei_bp.route('/api/historico', methods=['GET'])
+def get_historico():
+    historico = PEIHistory.query.order_by(PEIHistory.data_edicao.desc()).all()
+    return jsonify([{
+        'id': h.id,
+        'data_edicao': h.data_edicao.isoformat(),
+        'usuario': User.query.get(h.editado_por).username,
+        'pei_id': h.pei_id,
+        'conteudo_anterior': h.conteudo_anterior,
+        'conteudo_novo': h.conteudo_novo
+    } for h in historico]), 200
 
 
 # ✅ Rota: Gerar PDF do PEI
@@ -450,7 +372,4 @@ def gerar_pdf():
             'Content-Disposition': f"attachment; filename=pei_{dados.get('nome', 'aluno')}_{datetime.now().strftime('%Y%m%d')}.pdf"
         }
     except Exception as e:
-        return jsonify({
-            "error": "Erro ao gerar PDF",
-            "detalhe": str(e)
-        }), 500
+        return jsonify({"error": "Erro ao gerar PDF", "detalhe": str(e)}), 500
