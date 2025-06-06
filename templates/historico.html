@@ -6,16 +6,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    .form-container {
-      max-width: 900px;
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f7fa; 
+      margin: 0;
+      padding: 0;
+    }
+    .container-historico {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 30px;
+      max-width: 1200px;
       margin: 40px auto;
+      padding: 0 20px;
+    }
+    .dados-aluno {
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-      padding: 30px;
+      padding: 25px;
     }
     h2 {
-      color: #003D7C; 
+      color: #003D7C;
       text-align: center;
       margin-bottom: 20px;
     }
@@ -34,6 +46,7 @@
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
       width: auto;
       min-width: 180px;
     }
@@ -54,6 +67,29 @@
       background-color: #f9f9f9;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .lista-peis {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 25px;
+    }
+    .titulo-lista {
+      font-size: 16px;
+      font-weight: bold;
+      color: #003D7C;
+      margin-bottom: 15px;
+    }
+    .versao-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .versao-item:last-child {
+      border-bottom: none;
+    }
+    .versao-item:hover {
+      background-color: #fdf6e3;
     }
     .button-group {
       display: flex;
@@ -78,70 +114,99 @@
   </style>
 </head>
 <body>
-  <div class="form-container">
-    <h2>Histórico de Alterações</h2>
 
+<div class="container-historico">
+  <!-- LADO ESQUERDO: Dados do Aluno -->
+  <div class="dados-aluno" id="dadosAluno">
+    <h2>Dados do Aluno</h2>
+    <p><strong>ID:</strong> <span id="aluno-id">-</span></p>
+    <p><strong>Nome:</strong> <span id="aluno-nome">-</span></p>
+    <p><strong>Curso:</strong> <span id="aluno-curso">-</span></p>
+    <p><strong>Unidade:</strong> <span id="aluno-unidade">-</span></p>
+    <p><strong>Data de Elaboração:</strong> <span id="aluno-data-elaboracao">-</span></p>
+    <p><strong>Responsável:</strong> <span id="aluno-responsavel">-</span></p>
     <input type="text" id="studentName" placeholder="Digite o nome do aluno">
     <button onclick="buscarHistorico()">Buscar</button>
-
-    <div class="historico-area" id="historicoArea"></div>
   </div>
 
-  <!-- Botão Voltar -->
-  <div class="button-group">
-    <a href="/dashboard" style="text-decoration: none;">
-      <button class="btn-voltar">← Voltar ao Dashboard</button>
-    </a>
+  <!-- LADO DIREITO: Lista de PEIs -->
+  <div class="lista-peis">
+    <h2 class="titulo-lista">Versões do PEI</h2>
+    <div id="listaPeis"></div>
   </div>
+</div>
 
-  <script>
-    async function buscarHistorico() {
-      const studentName = document.getElementById('studentName').value.trim();
-      const resultadosDiv = document.getElementById('historicoArea');
+<!-- Botão Voltar -->
+<div class="button-group">
+  <a href="/dashboard" style="text-decoration: none;">
+    <button class="btn-voltar">← Voltar ao Dashboard</button>
+  </a>
+</div>
 
-      if (!studentName) {
-        resultadosDiv.innerHTML = "<p>⚠️ Digite um nome válido.</p>";
+<script>
+  async function buscarHistorico() {
+    const studentName = document.getElementById('studentName').value.trim();
+    const dadosDiv = document.getElementById('dadosAluno');
+    const listaDiv = document.getElementById('listaPeis');
+
+    if (!studentName) {
+      alert("⚠️ Digite um nome válido.");
+      return;
+    }
+
+    try {
+      // Busca aluno pelo nome
+      const alunoRes = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
+      const alunos = await alunoRes.json();
+
+      if (!alunos.length) {
+        dadosDiv.innerHTML = "<p>Nenhum aluno encontrado.</p>";
+        listaDiv.innerHTML = "";
         return;
       }
 
-      try {
-        const alunoRes = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
-        const alunos = await alunoRes.json();
+      const aluno = alunos[0];  // Seleciona o primeiro aluno
+      dadosDiv.innerHTML = `
+        <h2>Dados do Aluno</h2>
+        <p><strong>ID:</strong> ${aluno.id}</p>
+        <p><strong>Nome:</strong> ${aluno.nome}</p>
+        <p><strong>Curso:</strong> ${aluno.curso || 'N/A'}</p>
+        <p><strong>Unidade:</strong> ${aluno.unidade || 'N/A'}</p>
+        <p><strong>Data de Elaboração:</strong> ${aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : 'N/A'}</p>
+        <p><strong>Responsável:</strong> ${aluno.responsavel || 'N/A'}</p>
+        <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+        <button onclick="buscarHistorico()">Buscar</button>
+      `;
 
-        if (!alunoRes.ok || !alunos.length) {
-          resultadosDiv.innerHTML = "<p>Nenhum aluno encontrado.</p>";
-          return;
-        }
+      // Busca histórico de versões do PEI
+      const histRes = await fetch(`/api/historico/aluno/${aluno.id}`);
+      const historico = await histRes.json();
 
-        resultadosDiv.innerHTML = '';
-        for (const aluno of alunos) {
-          const histRes = await fetch(`/api/historico/aluno/${aluno.id}`);
-          const historico = await histRes.json();
-
-          if (!histRes.ok || !historico.length) {
-            resultadosDiv.innerHTML += `
-              <div class="card-historico">
-                <strong>${aluno.nome}</strong><br>
-                Nenhuma alteração registrada.
-              </div>`;
-            continue;
-          }
-
-          historico.forEach(h => {
-            const dataFormatada = new Date(h.data_edicao).toLocaleDateString();
-            resultadosDiv.innerHTML += `
-              <div class="card-historico" onclick="location.href='/cadastro?id=${aluno.id}'">
-                <strong>Nome:</strong> ${aluno.nome}<br>
-                <strong>Data da Edição:</strong> ${dataFormatada}<br>
-                <strong>Autor:</strong> ${h.usuario}
-              </div>`;
-          });
-        }
-      } catch (err) {
-        console.error("Erro ao carregar histórico:", err);
-        resultadosDiv.innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
+      if (!histRes.ok || !historico.length) {
+        listaDiv.innerHTML = "<p>Nenhuma versão encontrada.</p>";
+        return;
       }
+
+      // Exibe as versões do PEI
+      listaDiv.innerHTML = `<h2 class="titulo-lista">Versões do PEI</h2>`;
+      historico.forEach(h => {
+        const dataFormatada = new Date(h.data_edicao).toLocaleDateString();
+        listaDiv.innerHTML += `
+          <div class="versao-item" onclick="verPreview(${h.pei_id})">
+            Versão salva em: ${dataFormatada}
+          </div>`;
+      });
+
+    } catch (err) {
+      console.error("Erro ao carregar histórico:", err);
+      alert("❌ Erro ao carregar histórico. Verifique o console.");
     }
-  </script>
+  }
+
+  function verPreview(pei_id) {
+    window.location.href = `/visualizar/pei/${pei_id}`;
+  }
+</script>
+
 </body>
 </html>
