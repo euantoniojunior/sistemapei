@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template_string
-from models.models import Student, PEI, PEIHistory
+from models.models import Student, PEI, PEIHistory, User
 from database.connection import db
 import json
 from datetime import datetime
@@ -31,7 +31,6 @@ def criar_pei():
             aluno_data = json.loads(request.form.get('aluno'))
             conteudo_data = json.loads(request.form.get('conteudo'))
 
-        # Validação dos campos obrigatórios
         campos_obrigatorios = ['nome', 'curso', 'unidade', 'periodo', 'data_elaboracao', 'responsavel']
         faltando = [campo for campo in campos_obrigatorios if not aluno_data.get(campo)]
         if faltando:
@@ -41,13 +40,14 @@ def criar_pei():
             }), 400
 
         student_id = aluno_data.get('id')
+        aluno = None
+        conteudo_anterior = '{}'
 
-        # Se tiver ID, é uma edição
         if student_id and str(student_id).isdigit():
             aluno = Student.query.get(int(student_id))
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
-            # Atualiza dados existentes
+
             aluno.nome = aluno_data.get('nome')
             aluno.curso = aluno_data.get('curso')
             aluno.unidade = aluno_data.get('unidade')
@@ -71,7 +71,8 @@ def criar_pei():
             aluno.supervisor = aluno_data.get('supervisor')
             aluno.gerente_unidade = aluno_data.get('gerente_unidade')
 
-            # Upload do arquivo do laudo médico (opcional)
+            db.session.flush()
+
             if 'laudo_medico_arquivo' in request.files:
                 file = request.files['laudo_medico_arquivo']
                 if file.filename != '':
@@ -79,14 +80,12 @@ def criar_pei():
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     aluno.laudo_medico_arquivo = filename
 
-            # Salva o conteúdo do PEI como JSON
             pei = PEI(
                 student_id=aluno.id,
                 conteudo=json.dumps(conteudo_data, ensure_ascii=False)
             )
             db.session.add(pei)
 
-            # Registra histórico da alteração
             historico = PEIHistory(
                 pei_id=pei.id,
                 editado_por=request.args.get('user_id') or session.get('user_id') or 1,
@@ -96,7 +95,6 @@ def criar_pei():
             db.session.add(historico)
 
         else:
-            # É novo cadastro
             aluno = Student(
                 nome=aluno_data.get('nome'),
                 curso=aluno_data.get('curso'),
@@ -124,7 +122,6 @@ def criar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-            # Upload do laudo médico (opcional)
             if 'laudo_medico_arquivo' in request.files:
                 file = request.files['laudo_medico_arquivo']
                 if file.filename != '':
@@ -132,14 +129,12 @@ def criar_pei():
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     aluno.laudo_medico_arquivo = filename
 
-            # Salva o conteúdo do PEI como JSON
             pei = PEI(
                 student_id=aluno.id,
                 conteudo=json.dumps(conteudo_data, ensure_ascii=False)
             )
             db.session.add(pei)
 
-            # Registra histórico da alteração
             historico = PEIHistory(
                 pei_id=pei.id,
                 editado_por=session.get('user_id') or 1,
@@ -188,7 +183,6 @@ def buscar_alunos():
         'diagnostico_cid': a.diagnostico_cid,
         'transtorno_identificado': a.transtorno_identificado,
         'laudo_medico': a.laudo_medico,
-        'laudo_medico_arquivo': a.laudo_medico_arquivo,
         'psicologo': a.psicologo,
         'psiquiatra': a.psiquiatra,
         'psicopedagogo': a.psicopedagogo,
@@ -203,10 +197,14 @@ def buscar_alunos():
     } for a in alunos])
 
 
-# ✅ Rota: Buscar aluno por ID (para edição)
-@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
-def buscar_aluno_por_id(student_id):
-    aluno = Student.query.get(student_id)
+# ✅ Nova rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def buscar_aluno_por_id():
+    student_id = request.args.get('id')
+    if not student_id or not student_id.isdigit():
+        return jsonify({"error": "ID do aluno inválido"}), 400
+
+    aluno = Student.query.get(int(student_id))
     if not aluno:
         return jsonify({"error": "Aluno não encontrado"}), 404
 
@@ -234,6 +232,30 @@ def buscar_aluno_por_id(student_id):
             print("Erro ao processar conteúdo do PEI:", e)
 
     return jsonify(aluno_dict), 200
+
+
+# ✅ Nova rota: Retornar dados de uma versão específica do PEI
+@pei_bp.route('/api/pei/<int:pei_id>', methods=['GET'])
+def get_pei_by_id(pei_id):
+    pei = PEI.query.get(pei_id)
+    if not pei:
+        return jsonify({"error": "PEI não encontrado"}), 404
+
+    aluno = Student.query.get(pei.student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    try:
+        conteudo = json.loads(pei.conteudo)
+    except:
+        return jsonify({"error": "Conteúdo do PEI inválido"}), 500
+
+    return jsonify({
+        "aluno": aluno.to_dict(),
+        "conteudo": conteudo,
+        "pei_id": pei.id,
+        "data_registro": pei.data_registro.isoformat()
+    }), 200
 
 
 # ✅ Nova rota: Histórico do aluno específico
@@ -268,7 +290,21 @@ def get_historico():
     } for h in historico]), 200
 
 
-# ✅ Rota: Exportar PDF do PEI
+# ✅ Nova rota: Relatório - todos os alunos
+@pei_bp.route('/api/relatorios', methods=['GET'])
+def relatorio_alunos():
+    alunos = Student.query.all()
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'unidade': a.unidade,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
+        'responsavel': a.responsavel
+    } for a in alunos]), 200
+
+
+# ✅ Rota: Gerar PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
@@ -345,7 +381,7 @@ def gerar_pdf():
         </div>
         <div style="display:flex; gap: 20px;">
           <p><strong>Data de Elaboração:</strong> {{ data_elaboracao }}</p>
-          <p><strong>Responsável:</strong> {{ responsavel }}</p>
+          <p><strong>Responsável pela Elaboração:</strong> {{ responsavel }}</p>
         </div>
         <h2>1. Identificação do Aluno</h2>
         <div style="display:flex; gap: 20px;">
