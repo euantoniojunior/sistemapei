@@ -24,7 +24,6 @@
       flex: 1;
       background: #f9f9f9; 
       border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
       padding: 20px;
     }
     .card-historico {
@@ -39,24 +38,8 @@
     .card-historico:hover {
       background-color: #f2f2f2;
     }
-    h2 {
-      color: #003D7C;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
-    }
-    input[type="text"], input[type="date"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      margin-top: 5px;
-      background-color: #eaeaea;
-      cursor: not-allowed;
+    h3 {
+      margin-top: 0;
     }
     .button-group {
       display: flex;
@@ -71,8 +54,6 @@
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-      min-width: 180px;
     }
     .btn-voltar:hover {
       background-color: #002a54;
@@ -83,12 +64,10 @@
   <div class="form-container">
     <h2>Histórico de Alterações</h2>
 
-    <!-- Campo de Busca -->
-    <input type="text" id="studentName" placeholder="Digite o nome do aluno" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc;">
-    <button onclick="buscarAluno()" style="margin-top: 10px; width: 100%; background-color: #F7931E; color: white; border: none; padding: 12px; border-radius: 6px;">Buscar Aluno</button>
+    <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+    <button onclick="buscarAluno()" style="margin-top:10px;">Buscar</button>
 
     <div class="container-historico" style="margin-top: 30px;">
-      <!-- Dados Principais -->
       <div class="dados-principais" id="dadosPrincipais">
         <p><strong>Nome:</strong> <span id="nome">N/A</span></p>
         <p><strong>Curso:</strong> <span id="curso">N/A</span></p>
@@ -97,14 +76,12 @@
         <p><strong>Responsável:</strong> <span id="responsavel">N/A</span></p>
       </div>
 
-      <!-- Histórico Lateral -->
       <div class="historico-lateral" id="historicoLateral">
         <h3>Evoluções Registradas</h3>
         <p>Nenhum aluno selecionado ainda.</p>
       </div>
     </div>
 
-    <!-- Botão Voltar -->
     <div class="button-group">
       <a href="/dashboard" style="text-decoration: none;">
         <button class="btn-voltar">← Voltar ao Dashboard</button>
@@ -115,8 +92,8 @@
   <script>
     async function buscarAluno() {
       const studentName = document.getElementById('studentName').value.trim();
-      const resultadosDiv = document.getElementById('dadosPrincipais');
-      const historicoDiv = document.getElementById('historicoLateral');
+      const dadosPrincipais = document.getElementById('dadosPrincipais');
+      const historicoLateral = document.getElementById('historicoLateral');
 
       if (!studentName) {
         alert("⚠️ Digite um nome válido.");
@@ -129,38 +106,38 @@
 
         if (!alunos.length) {
           alert("❌ Nenhum aluno encontrado.");
-          resultadosDiv.innerHTML = '<p>Nenhum aluno encontrado.</p>';
-          historicoDiv.innerHTML = '<p>Nenhuma evolução registrada.</p>';
           return;
         }
 
-        const aluno = alunos[0]; // Se encontrar mais de um, pega o primeiro
+        const aluno = alunos[0];
 
-        // Preenche dados principais
-        document.getElementById("nome").textContent = aluno.nome || 'N/A';
-        document.getElementById("curso").textContent = aluno.curso || 'N/A';
-        document.getElementById("unidade").textContent = aluno.unidade || 'N/A';
-        document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : 'N/A';
-        document.getElementById("responsavel").textContent = aluno.responsavel || 'N/A';
+        document.getElementById("nome").textContent = aluno.nome || "N/A";
+        document.getElementById("curso").textContent = aluno.curso || "N/A";
+        document.getElementById("unidade").textContent = aluno.unidade || "N/A";
+        document.getElementById("periodo").textContent = aluno.periodo || "N/A";
+        document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
+        document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
 
         // Carrega histórico desse aluno
-        const histRes = await fetch(`/api/historico/aluno/${aluno.id}`);
+        const histRes = await fetch("/api/historico");
         const historico = await histRes.json();
 
         if (!historico.length) {
-          historicoDiv.innerHTML = '<p>Nenhuma alteração registrada.</p>';
+          historicoLateral.innerHTML = '<p>Nenhuma alteração registrada.</p>';
           return;
         }
 
-        historicoDiv.innerHTML = `<h3>Evoluções Registradas</h3>`;
+        historicoLateral.innerHTML = `<h3>Evoluções Registradas</h3>`;
         historico.forEach(h => {
-          const dataFormatada = new Date(h.data_edicao).toLocaleString();
-          historicoDiv.innerHTML += `
-            <div class="card-historico" onclick="abrirPreview(${h.pei_id})">
-              <small>${dataFormatada}</small><br>
-              <strong>Versão ${h.id}</strong><br>
-              <em>${h.usuario}</em>
-            </div>`;
+          if (h.pei_id === aluno.id) {
+            const dataFormatada = new Date(h.data_edicao).toLocaleString();
+            historicoLateral.innerHTML += `
+              <div class="card-historico" onclick="abrirPreview(${h.pei_id})">
+                <small>${dataFormatada}</small><br>
+                <strong>Versão ${h.id}</strong><br>
+                <em>${h.usuario}</em>
+              </div>`;
+          }
         });
 
       } catch (err) {
