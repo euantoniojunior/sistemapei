@@ -1,45 +1,4 @@
-/* =================== Variáveis Globais =================== */
-:root {
-  --primary-color: #003D7C;
-  --primary-hover: #002a54;
-  --accent-color: #F7931E;
-  --accent-hover: #e67e22;
-  --bg-light: #f4f7fa;
-  --text-color: #333;
-  --border-radius: 6px;
-  --transition-time: 0.3s ease;
-  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* =================== Reset Básico =================== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body,
-html {
-  height: 100%;
-}
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background-color: var(--bg-light);
-  color: var(--text-color);
-  line-height: 1.6;
-}
-h1, h2, h3, h4, h5, h6 {
-  color: var(--primary-color);
-}
-a {
-  text-decoration: none;
-  color: inherit;
-}
-button {
-  font-family: inherit;
-}
-img {
-  max-width: 100%;
-}
+/* style.css - Estilo global */
 
 /* =================== Botões =================== */
 .btn-voltar {
@@ -47,33 +6,48 @@ img {
   width: auto;
   min-width: 180px;
   padding: 10px 16px;
-  background-color: var(--primary-color);
+  background-color: #003D7C;
   color: white;
   border: none;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   cursor: pointer;
   text-align: center;
   margin-top: 30px;
   margin-bottom: 20px;
   font-size: 14px;
-  transition: background-color var(--transition-time);
+  transition: background-color 0.3s ease;
 }
 .btn-voltar:hover {
-  background-color: var(--primary-hover);
+  background-color: #002a54;
 }
 
-.btn-primary {
-  background-color: var(--accent-color);
+/* =================== Reset Básico =================== */
+* {
+  box-sizing: border-box;
+}
+
+/* =================== Estilo do Body =================== */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f7fa;
+  color: #333;
+}
+
+/* =================== Botões Gerais =================== */
+button {
+  background-color: #f7931e;
   color: white;
   border: none;
   padding: 12px;
   width: 100%;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color var(--transition-time);
+  transition: background-color 0.3s ease;
 }
-.btn-primary:hover {
-  background-color: var(--accent-hover);
+button:hover {
+  background-color: #e67e22;
 }
 
 /* =================== Formulários =================== */
@@ -85,7 +59,7 @@ textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #ccc;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-size: 15px;
   margin: 10px 0;
 }
@@ -97,67 +71,41 @@ textarea:focus {
   background-color: #eaeaea;
 }
 
+/* =================== Containers =================== */
 .form-container {
   max-width: 900px;
   margin: 40px auto;
   background: white;
   border-radius: 12px;
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   padding: 30px;
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 40px 20px;
 }
 
 /* =================== Cards =================== */
 .card {
   background-color: white;
   border-radius: 12px;
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   padding: 20px;
   text-align: center;
-  transition: transform var(--transition-time);
+  transition: transform 0.3s ease;
   cursor: pointer;
 }
 .card:hover {
   transform: translateY(-5px);
 }
 .card h3 {
-  color: var(--primary-color);
+  color: #003D7C;
   margin-bottom: 10px;
 }
 .card p {
   color: #555;
   font-size: 14px;
-}
-
-.card-historico {
-  background: #f5f5f5;
-  padding: 15px;
-  border-left: 5px solid var(--accent-color);
-  border-radius: 8px;
-  margin-top: 20px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-.card-historico strong {
-  color: var(--primary-color);
-}
-
-/* =================== Layout Geral =================== */
-.container {
-  max-width: 1000px;
-  margin: auto;
-  padding: 40px 20px;
-}
-.header h1 {
-  color: var(--primary-color);
-  font-size: 28px;
-  font-weight: 700;
-}
-.header p {
-  color: #666;
-  font-size: 16px;
-}
-.logo {
-  width: 160px;
-  margin-bottom: 20px;
 }
 
 /* =================== Grids =================== */
@@ -170,6 +118,19 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
+}
+
+/* =================== Histórico =================== */
+.card-historico {
+  background: #f5f5f5;
+  padding: 15px;
+  border-left: 5px solid #F7931E;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.card-historico strong {
+  color: #003D7C;
 }
 
 /* =================== Mensagens =================== */
@@ -186,6 +147,23 @@ textarea:focus {
   color: red;
 }
 
+/* =================== Header =================== */
+.header h1 {
+  color: #003D7C;
+  font-size: 28px;
+  font-weight: 700;
+}
+.header p {
+  color: #666;
+  font-size: 16px;
+}
+
+/* =================== Logo =================== */
+.logo {
+  width: 160px;
+  margin-bottom: 20px;
+}
+
 /* =================== Grupos de Botões =================== */
 .button-group {
   display: flex;
@@ -195,30 +173,7 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
-/* =================== Histórico =================== */
+/* =================== Área de Histórico =================== */
 .historico-area {
   margin-top: 30px;
-}
-
-/* =================== Tabelas =================== */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-th, td {
-  border: 1px solid #000;
-  padding: 8px;
-  text-align: left;
-}
-
-/* =================== Responsividade =================== */
-@media (max-width: 768px) {
-  .button-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  button {
-    width: 100%;
-  }
 }
