@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string, send_file
+from flask import Blueprint, request, jsonify, session, render_template_string
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
