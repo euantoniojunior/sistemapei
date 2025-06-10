@@ -1,60 +1,59 @@
-from flask import Blueprint, request, jsonify, session, redirect
+from flask import Blueprint, request, jsonify, session
+from models import User
 from werkzeug.security import generate_password_hash, check_password_hash
-from models.models import User
-from database.connection import db
 
 auth_bp = Blueprint('auth', __name__)
-
 
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
-    user = User.query.filter_by(username=data['username']).first()
+    username = data.get('username')
+    password = data.get('password')
 
-    if not user or not check_password_hash(user.password, data['password']):
-        return jsonify({"error": "Usuário ou senha inválido"}), 401
+    user = User.query.filter_by(username=username).first()
+
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"error": "Credenciais inválidas"}), 401
 
     session['user_id'] = user.id
-    return jsonify({"message": "Login realizado com sucesso!"})
-
+    return jsonify({"message": "Login bem-sucedido!"}), 200
 
 @auth_bp.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
-    if User.query.filter_by(username=data['username']).first():
-        return jsonify({"error": "Nome de usuário já existe."}), 400
+    username = data.get('username')
+    password = data.get('password')
 
-    hashed_pw = generate_password_hash(data['password'])
-    user = User(username=data['username'], password=hashed_pw)
+    if not username or not password:
+        return jsonify({"error": "Nome ou senha não fornecidos"}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "Usuário já existe"}), 400
+
+    hashed_pw = generate_password_hash(password)
+    user = User(username=username, password=hashed_pw)
+
     db.session.add(user)
     db.session.commit()
-    return jsonify({"message": "Usuário criado com sucesso!"}), 201
 
+    return jsonify({"message": "Usuário criado com sucesso!"}), 201
 
 @auth_bp.route('/api/change-password', methods=['POST'])
 def change_password():
-    if 'user_id' not in session:
-        return jsonify({"error": "Você precisa estar logado."}), 401
+    data = request.get_json()
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+    user_id = session.get('user_id')
 
-    data = request.json
-    current_user = User.query.get(session['user_id'])
+    if not user_id:
+        return jsonify({"error": "Você precisa estar logado"}), 401
 
-    if not check_password_hash(current_user.password, data['oldPassword']):
-        return jsonify({"error": "Senha antiga incorreta."}), 400
+    user = User.query.get(user_id)
 
-    new_password = data.get('newPassword', '')
-    if len(new_password) < 6:
-        return jsonify({"error": "Nova senha deve ter pelo menos 6 caracteres."}), 400
+    if not check_password_hash(user.password, old_password):
+        return jsonify({"error": "Senha antiga incorreta"}), 401
 
-    try:
-        current_user.password = generate_password_hash(new_password)
-        db.session.commit()
-        return jsonify({"message": "✅ Senha alterada com sucesso!"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "❌ Erro ao alterar senha.", "detalhe": str(e)}), 500
+    user.password = generate_password_hash(new_password)
+    db.session.commit()
 
-@auth_bp.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
+    return jsonify({"message": "Senha alterada com sucesso!"}), 200
