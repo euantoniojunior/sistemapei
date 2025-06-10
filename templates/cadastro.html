@@ -354,8 +354,14 @@
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
 
-    if (studentId) {
-      try {
+    // Se não tem ID na URL, liberar todos os campos para cadastro novo
+    if (!studentId) {
+        limparCampos();
+        return;  // Sai da função aqui, sem carregar dados nem bloquear campos
+    }
+
+    // Se tem ID, carrega os dados do aluno e mantém campos bloqueados
+    try {
         const res = await fetch(`/api/alunos/${studentId}`);
         const aluno = await res.json();
 
@@ -363,9 +369,9 @@
         document.getElementById("curso").value = aluno.curso || "";
         document.getElementById("unidade").value = aluno.unidade || "";
         document.getElementById("periodo").value = aluno.periodo || "";
-        document.getElementById("data_elaboracao").value = aluno.data_elaboracao || "";
         document.getElementById("responsavel").value = aluno.responsavel || "";
-        document.getElementById("data_nascimento").value = aluno.data_nascimento || "";
+        document.getElementById("data_elaboracao").value = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString().split('/').reverse().join('-') : "";
+        document.getElementById("data_nascimento").value = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString().split('/').reverse().join('-') : "";
         document.getElementById("idade").value = aluno.idade || "";
         document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
         document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
@@ -375,29 +381,22 @@
         document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
         document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
         document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
-        document.getElementById("objetivos_gerais").value = aluno.objetivos_gerais || "";
-        document.getElementById("adaptaçoes_pedagogicas").value = aluno.adaptaçoes_pedagogicas || "";
-        document.getElementById("intervencoes_complementares").value = aluno.intervencoes_complementares || "";
-        document.getElementById("meta_curto_prazo").value = aluno.meta_curto_prazo || "";
-        document.getElementById("responsavel_curto").value = aluno.responsavel_curto || "";
-        document.getElementById("avaliacao_curto").value = aluno.avaliacao_curto || "";
-        document.getElementById("meta_medio_prazo").value = aluno.meta_medio_prazo || "";
-        document.getElementById("responsavel_medio").value = aluno.responsavel_medio || "";
-        document.getElementById("avaliacao_medio").value = aluno.avaliacao_medio || "";
-        document.getElementById("meta_longo_prazo").value = aluno.meta_longo_prazo || "";
-        document.getElementById("responsavel_longo").value = aluno.responsavel_longo || "";
-        document.getElementById("avaliacao_longo").value = aluno.avaliacao_longo || "";
         document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
-        document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "";
+        document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString().split('/').reverse().join('-') : "";
+        document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
+        document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
+        document.getElementById("supervisor").value = aluno.supervisor || "";
+        document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
 
-        // Desabilita os campos não editáveis
+        // Apenas bloqueia os campos se for edição
         bloquearCampos(false);
-      } catch (err) {
+
+    } catch (err) {
         console.error("Erro ao carregar aluno:", err);
         document.getElementById("msg").innerText = "❌ Erro ao carregar dados do aluno.";
         document.getElementById("msg").style.color = "red";
-      }
-    } else {
+    }
+} else {
       limparCampos();
     }
   }
