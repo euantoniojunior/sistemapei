@@ -27,53 +27,36 @@ def parse_date(date_str):
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        aluno_data = request.json.get('aluno')
-        conteudo_data = request.json.get('conteudo')
-
-        if not aluno_data or not conteudo_data:
-            return jsonify({'error': 'Dados incompletos'}), 400
-
-        student_id = aluno_data.get('student_id')
-        aluno = None
-
-        # Editar aluno existente
-        if student_id:
-            aluno = Student.query.get(student_id)
-            if not aluno:
-                return jsonify({'error': 'Aluno não encontrado'}), 404
-
-            aluno.nome = aluno_data.get('nome')
-            aluno.curso = aluno_data.get('curso')
-            aluno.unidade = aluno_data.get('unidade')
-            aluno.periodo = aluno_data.get('periodo')
-            aluno.responsavel = aluno_data.get('responsavel')
-            aluno.data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
-            aluno.data_nascimento = parse_date(aluno_data.get('data_nascimento'))
-            aluno.idade = aluno_data.get('idade')
-            aluno.diagnostico_cid = aluno_data.get('diagnostico_cid')
-            aluno.transtorno_identificado = aluno_data.get('transtorno_identificado')
-            aluno.laudo_medico = aluno_data.get('laudo_medico')
-            aluno.psicologo = aluno_data.get('psicologo')
-            aluno.psiquiatra = aluno_data.get('psiquiatra')
-            aluno.psicopedagogo = aluno_data.get('psicopedagogo')
-            aluno.outros_profissionais = aluno_data.get('outros_profissionais')
-            aluno.perfil_aluno = aluno_data.get('perfil_aluno')
-            aluno.observacoes_gerais = aluno_data.get('observacoes_gerais')
-            aluno.proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
-            aluno.responsavel_legal = aluno_data.get('responsavel_legal')
-            aluno.orientador_responsavel = aluno_data.get('orientador_responsavel')
-            aluno.supervisor = aluno_data.get('supervisor')
-            aluno.gerente_unidade = aluno_data.get('gerente_unidade')
-
+        if request.is_json:
+            data = request.get_json()
+            aluno_data = data.get('aluno')
+            conteudo_data = data.get('conteudo')
         else:
-            # Cadastrar novo aluno
+            aluno_json = request.form.get('aluno')
+            conteudo_json = request.form.get('conteudo')
+
+            if not aluno_json or not conteudo_json:
+                return jsonify({"error": "Dados ausentes no formulário"}), 400
+
+            aluno_data = json.loads(aluno_json)
+            conteudo_data = json.loads(conteudo_json)
+
+        student_id = aluno_data.get('student_id')  # ← Usando o campo certo!
+
+        if student_id and str(student_id).isdigit():
+            aluno = Student.query.get(int(student_id))
+            if not aluno:
+                return jsonify({"error": "Aluno não encontrado"}), 404
+            # Atualiza campos editáveis...
+        else:
+            # Cria novo aluno
             aluno = Student(
                 nome=aluno_data.get('nome'),
                 curso=aluno_data.get('curso'),
                 unidade=aluno_data.get('unidade'),
                 periodo=aluno_data.get('periodo'),
-                responsavel=aluno_data.get('responsavel'),
                 data_elaboracao=parse_date(aluno_data.get('data_elaboracao')),
+                responsavel=aluno_data.get('responsavel'),
                 data_nascimento=parse_date(aluno_data.get('data_nascimento')),
                 idade=aluno_data.get('idade'),
                 diagnostico_cid=aluno_data.get('diagnostico_cid'),
@@ -92,26 +75,16 @@ def criar_pei():
                 gerente_unidade=aluno_data.get('gerente_unidade')
             )
             db.session.add(aluno)
-            db.session.flush()
+            db.session.flush()  # Garante ID antes de salvar PEI
 
-        # Upload do laudo médico (opcional)
-        if 'laudo_medico_arquivo' in request.files:
-            file = request.files['laudo_medico_arquivo']
-            if file.filename != '':
-                if not allowed_file(file.filename):
-                    return jsonify({"error": "Tipo de arquivo não permitido"}), 400
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(UPLOAD_FOLDER, filename))
-                aluno.laudo_medico_arquivo = filename
-
-        # Salva o conteúdo do PEI como JSON
+        # Salva conteúdo do PEI como JSON
         pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
         db.session.add(pei)
 
         # Registra histórico da edição
         historico = PEIHistory(
             pei_id=pei.id,
-            editado_por=request.session.get('user_id') or 1,
+            editado_por=session.get('user_id') or 1,
             conteudo_anterior="{}",
             conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
         )
