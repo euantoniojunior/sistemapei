@@ -335,7 +335,7 @@
 
         if (!validarCamposObrigatorios()) return;
 
-        // Pega todos os dados do formulário
+        // Coleta dados do aluno
         alunoData = {
             student_id: null,
             nome: document.getElementById("nome").value.trim(),
@@ -362,6 +362,7 @@
             gerente_unidade: document.getElementById("gerente_unidade").value || ""
         };
 
+        // Coleta conteúdo do PEI
         conteudoData = {
             objetivos_gerais: document.getElementById("objetivos_gerais").value,
             adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
@@ -385,6 +386,10 @@
             }
         };
 
+        // Armazena temporariamente
+        localStorage.setItem("peiAluno", JSON.stringify(alunoData));
+        localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
+
         // Bloqueia campos
         const todosCampos = document.querySelectorAll(`input, textarea, select`);
         Array.from(todosCampos).forEach(campo => {
@@ -392,20 +397,19 @@
             campo.disabled = true;
         });
 
-        // Armazena temporariamente no localStorage
-        localStorage.setItem("peiAluno", JSON.stringify(alunoData));
-        localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
-
         // Feedback
         msgEl.style.color = "green";
-        msgEl.innerText = "✅ Dados salvo localmente. Clique em 'Finalizar Cadastro'.";
+        msgEl.innerText = "✅ Prévia salva localmente.";
 
-        // Exibe botão Finalizar Cadastro
+        // Exibe botão "Finalizar Cadastro"
         const botoesDiv = document.getElementById("botoes-iniciais");
         botoesDiv.innerHTML = `
-            <button type="button" onclick="finalizarCadastro()" class="btn-finalizar">Finalizar Cadastro</button>
+            <button type="button" onclick="finalizarCadastro()" class="btn-editar">Finalizar Cadastro</button>
             <button type="button" onclick="location.href='/dashboard'" class="btn-voltar">Voltar</button>
         `;
+        
+        // Abre o preview automaticamente
+        window.open('/preview', '_blank');
     }
 
     async function finalizarCadastro() {
@@ -414,7 +418,7 @@
 
         if (!alunoJson || !conteudoJson) {
             msgEl.style.color = "red";
-            msgEl.innerText = "❌ Dados não encontrados. Salve novamente antes de finalizar.";
+            msgEl.innerText = "❌ Dados não encontrados. Volte e salve novamente.";
             return;
         }
 
@@ -434,14 +438,11 @@
                 msgEl.innerText = "✅ Cadastro salvo com sucesso!";
                 localStorage.removeItem("peiAluno");
                 localStorage.removeItem("peiConteudo");
-
-                // Abre preview
-                window.open('/preview', '_blank');
-
             } else {
                 throw new Error(data.error || "Erro desconhecido");
             }
         } catch (err) {
+            console.error("Erro ao salvar:", err);
             msgEl.style.color = "red";
             msgEl.innerText = "❌ Erro ao finalizar cadastro: " + err.message;
         }
@@ -504,7 +505,7 @@
             document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
             document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
             document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
-            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao || "";
+            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString().split('/').reverse().join('-') : "";
             document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
             document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
             document.getElementById("supervisor").value = aluno.supervisor || "";
