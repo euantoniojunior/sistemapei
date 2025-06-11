@@ -58,8 +58,7 @@
             margin-top: 30px;
         }
 
-        .btn-imprimir,
-        .btn-exportar {
+        .btn-imprimir {
             background-color: #F7931E;
             color: white;
             border: none;
@@ -67,161 +66,135 @@
             font-size: 16px;
             border-radius: 6px;
             cursor: pointer;
-            margin: 0 10px;
             transition: background-color 0.3s ease;
         }
 
-        .btn-imprimir:hover,
-        .btn-exportar:hover {
+        .btn-imprimir:hover {
             background-color: #e67e22;
         }
 
-        /* Estilo para impressão */
         @media print {
             .actions {
                 display: none;
-            }
-            body {
-                background: white;
-                -webkit-print-color-adjust: exact;
             }
         }
     </style>
 </head>
 <body>
 
-    <h1>Plano Educacional Individualizado (PEI)</h1>
+<h1>Plano Educacional Individualizado (PEI)</h1>
 
-    <!-- Dados do Aluno -->
-    <h2>1. Identificação do Aluno</h2>
-    <p><strong>Nome:</strong> <span id="nome"></span></p>
-    <p><strong>Curso:</strong> <span id="curso"></span></p>
-    <p><strong>Unidade:</strong> <span id="unidade"></span></p>
-    <p><strong>Período:</strong> <span id="periodo"></span></p>
-    <p><strong>Responsável:</strong> <span id="responsavel"></span></p>
+<!-- Identificação -->
+<h2>1. Identificação do Aluno</h2>
+<p><strong>Nome:</strong> <span id="nome"></span></p>
+<p><strong>Curso:</strong> <span id="curso"></span></p>
+<p><strong>Unidade:</strong> <span id="unidade"></span></p>
+<p><strong>Período:</strong> <span id="periodo"></span></p>
+<p><strong>Data de Elaboração:</strong> <span id="data_elaboracao"></span></p>
+<p><strong>Responsável:</strong> <span id="responsavel"></span></p>
 
-    <!-- Metas -->
-    <h2>2. Metas Individuais</h2>
-    <p><strong>Curto prazo:</strong> <span id="meta_curto_prazo"></span> — <strong>Responsável:</strong> <span id="responsavel_curto"></span> — <strong>Avaliação:</strong> <span id="avaliacao_curto"></span></p>
-    <p><strong>Médio prazo:</strong> <span id="meta_medio_prazo"></span> — <strong>Responsável:</strong> <span id="responsavel_medio"></span> — <strong>Avaliação:</strong> <span id="avaliacao_medio"></span></p>
-    <p><strong>Longo prazo:</strong> <span id="meta_longo_prazo"></span> — <strong>Responsável:</strong> <span id="responsavel_longo"></span> — <strong>Avaliação:</strong> <span id="avaliacao_longo"></span></p>
+<!-- Metas -->
+<h2>2. Metas Individuais</h2>
+<table>
+    <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
+    <tr><td>Curto prazo</td><td id="meta_curto_prazo"></td><td id="responsavel_curto"></td><td id="avaliacao_curto"></td></tr>
+    <tr><td>Médio prazo</td><td id="meta_medio_prazo"></td><td id="responsavel_medio"></td><td id="avaliacao_medio"></td></tr>
+    <tr><td>Longo prazo</td><td id="meta_longo_prazo"></td><td id="responsavel_longo"></td><td id="avaliacao_longo"></td></tr>
+</table>
 
-    <!-- Objetivos Gerais -->
-    <h2>3. Objetivos Gerais</h2>
-    <p id="objetivos_gerais"></p>
+<!-- Conteúdo -->
+<h2>3. Objetivos Gerais</h2>
+<p id="objetivos_gerais"></p>
 
-    <!-- Adaptações Pedagógicas -->
-    <h2>4. Adaptações Pedagógicas</h2>
-    <p id="adaptaçoes_pedagogicas"></p>
+<h2>4. Adaptações Pedagógicas</h2>
+<p id="adaptaçoes_pedagogicas"></p>
 
-    <!-- Intervenções Complementares -->
-    <h2>5. Intervenções Complementares</h2>
-    <p id="intervencoes_complementares"></p>
+<h2>5. Intervenções Complementares</h2>
+<p id="intervencoes_complementares"></p>
 
-    <!-- Perfil do Aluno -->
-    <h2>6. Perfil do Aluno</h2>
-    <p id="perfil_aluno"></p>
+<h2>6. Perfil do Aluno</h2>
+<p id="perfil_aluno"></p>
 
-    <!-- Acompanhamento -->
-    <h2>7. Acompanhamento e Revisão do PEI</h2>
-    <p><strong>Observações gerais:</strong> <span id="observacoes_gerais"></span></p>
-    <p><strong>Data da próxima avaliação:</strong> <span id="proxima_avaliacao"></span></p>
+<h2>7. Acompanhamento e Revisão do PEI</h2>
+<p><strong>Observações gerais:</strong> <span id="observacoes_gerais"></span></p>
+<p><strong>Data da próxima avaliação:</strong> <span id="proxima_avaliacao"></span></p>
 
-    <!-- Assinaturas -->
-    <div class="assinatura">
-        <div>
-            Responsável legal<br>
-            __________________________<br>
-            <span id="responsavel_legal"></span>
-        </div>
-        <div>
-            Orientador responsável<br>
-            __________________________<br>
-            <span id="orientador_responsavel"></span>
-        </div>
-        <div>
-            Supervisor<br>
-            __________________________<br>
-            <span id="supervisor"></span>
-        </div>
-        <div>
-            Gerente de Unidade<br>
-            __________________________<br>
-            <span id="gerente_unidade"></span>
-        </div>
+<!-- Assinaturas -->
+<div class="assinatura">
+    <div>
+        Responsável legal<br>
+        __________________________<br>
+        <span id="responsavel_legal"></span>
     </div>
-
-    <!-- Botões -->
-    <div class="actions">
-        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
-        <button class="btn-exportar" onclick="exportarPDF()">📄 Exportar para PDF</button>
+    <div>
+        Orientador responsável<br>
+        __________________________<br>
+        <span id="orientador_responsavel"></span>
     </div>
+    <div>
+        Supervisor<br>
+        __________________________<br>
+        <span id="supervisor"></span>
+    </div>
+    <div>
+        Gerente de Unidade<br>
+        __________________________<br>
+        <span id="gerente_unidade"></span>
+    </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script> 
-    <script>
-        window.onload = () => {
-            const aluno = JSON.parse(localStorage.getItem("peiAluno"));
-            const conteudo = JSON.parse(localStorage.getItem("peiConteudo"));
+<!-- Botão de impressão -->
+<div class="actions">
+    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+</div>
 
-            if (!aluno || !conteudo) {
-                alert("Nenhum dado encontrado. Volte e finalize o cadastro.");
-                return;
-            }
+<script>
+    window.onload = () => {
+        const aluno = JSON.parse(localStorage.getItem("peiAluno"));
+        const conteudo = JSON.parse(localStorage.getItem("peiConteudo"));
 
-            // Preenche os campos
-            document.getElementById("nome").innerText = aluno.nome || "N/A";
-            document.getElementById("curso").innerText = aluno.curso || "N/A";
-            document.getElementById("unidade").innerText = aluno.unidade || "N/A";
-            document.getElementById("periodo").innerText = aluno.periodo || "N/A";
-            document.getElementById("responsavel").innerText = aluno.responsavel || "N/A";
-
-            document.getElementById("meta_curto_prazo").innerText = conteudo.metas.curto_prazo.meta || "N/A";
-            document.getElementById("responsavel_curto").innerText = conteudo.metas.curto_prazo.responsavel || "N/A";
-            document.getElementById("avaliacao_curto").innerText = conteudo.metas.curto_prazo.avaliacao || "N/A";
-
-            document.getElementById("meta_medio_prazo").innerText = conteudo.metas.medio_prazo.meta || "N/A";
-            document.getElementById("responsavel_medio").innerText = conteudo.metas.medio_prazo.responsavel || "N/A";
-            document.getElementById("avaliacao_medio").innerText = conteudo.metas.medio_prazo.avaliacao || "N/A";
-
-            document.getElementById("meta_longo_prazo").innerText = conteudo.metas.longo_prazo.meta || "N/A";
-            document.getElementById("responsavel_longo").innerText = conteudo.metas.longo_prazo.responsavel || "N/A";
-            document.getElementById("avaliacao_longo").innerText = conteudo.metas.longo_prazo.avaliacao || "N/A";
-
-            document.getElementById("objetivos_gerais").innerText = conteudo.objetivos_gerais || "N/A";
-            document.getElementById("adaptaçoes_pedagogicas").innerText = conteudo.adaptaçoes_pedagogicas || "N/A";
-            document.getElementById("intervencoes_complementares").innerText = conteudo.intervencoes_complementares || "N/A";
-            document.getElementById("perfil_aluno").innerText = aluno.perfil_aluno || "N/A";
-            document.getElementById("observacoes_gerais").innerText = aluno.observacoes_gerais || "N/A";
-            document.getElementById("proxima_avaliacao").innerText = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
-
-            document.getElementById("responsavel_legal").innerText = aluno.responsavel_legal || "N/A";
-            document.getElementById("orientador_responsavel").innerText = aluno.orientador_responsavel || "N/A";
-            document.getElementById("supervisor").innerText = aluno.supervisor || "N/A";
-            document.getElementById("gerente_unidade").innerText = aluno.gerente_unidade || "N/A";
-        };
-
-        async function exportarPDF() {
-            const aluno = JSON.parse(localStorage.getItem("peiAluno"));
-            const conteudo = JSON.parse(localStorage.getItem("peiConteudo"));
-
-            if (!aluno || !conteudo) {
-                alert("Dados não encontrados. Finalize o cadastro primeiro.");
-                return;
-            }
-
-            const element = document.body;
-
-            const opt = {
-                margin:       1,
-                filename:     `PEI_${aluno.nome || 'aluno'}_${new Date().toISOString().split("T")[0]}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            await html2pdf().set(opt).from(element).save();
+        if (!aluno || !conteudo) {
+            document.body.innerHTML = "<h2>⚠️ Nenhum dado encontrado. Volte ao cadastro.</h2>";
+            return;
         }
-    </script>
 
-</body>
-</html>
+        // Preenche os dados do aluno
+        document.getElementById("nome").innerText = aluno.nome || "N/A";
+        document.getElementById("curso").innerText = aluno.curso || "N/A";
+        document.getElementById("unidade").innerText = aluno.unidade || "N/A";
+        document.getElementById("periodo").innerText = aluno.periodo || "N/A";
+        document.getElementById("data_elaboracao").innerText = aluno.data_elaboracao || "N/A";
+        document.getElementById("responsavel").innerText = aluno.responsavel || "N/A";
+        document.getElementById("data_nascimento").innerText = aluno.data_nascimento || "N/A";
+        document.getElementById("idade").innerText = aluno.idade || "N/A";
+        document.getElementById("diagnostico_cid").innerText = aluno.diagnostico_cid || "N/A";
+        document.getElementById("transtorno_identificado").innerText = aluno.transtorno_identificado || "N/A";
+        document.getElementById("psicologo").innerText = aluno.psicologo || "N/A";
+        document.getElementById("psiquiatra").innerText = aluno.psiquiatra || "N/A";
+        document.getElementById("psicopedagogo").innerText = aluno.psicopedagogo || "N/A";
+        document.getElementById("outros_profissionais").innerText = aluno.outros_profissionais || "N/A";
+
+        // Preenche os dados do conteúdo do PEI
+        document.getElementById("objetivos_gerais").innerText = conteudo.objetivos_gerais || "N/A";
+        document.getElementById("adaptaçoes_pedagogicas").innerText = conteudo.adaptaçoes_pedagogicas || "N/A";
+        document.getElementById("intervencoes_complementares").innerText = conteudo.intervencoes_complementares || "N/A";
+        document.getElementById("perfil_aluno").innerText = aluno.perfil_aluno || "N/A";
+        document.getElementById("observacoes_gerais").innerText = aluno.observacoes_gerais || "N/A";
+        document.getElementById("proxima_avaliacao").innerText = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
+        document.getElementById("responsavel_legal").innerText = aluno.responsavel_legal || "N/A";
+        document.getElementById("orientador_responsavel").innerText = aluno.orientador_responsavel || "N/A";
+        document.getElementById("supervisor").innerText = aluno.supervisor || "N/A";
+        document.getElementById("gerente_unidade").innerText = aluno.gerente_unidade || "N/A";
+
+        // Metas
+        document.getElementById("meta_curto_prazo").innerText = conteudo.metas?.curto_prazo?.meta || "N/A";
+        document.getElementById("responsavel_curto").innerText = conteudo.metas?.curto_prazo?.responsavel || "N/A";
+        document.getElementById("avaliacao_curto").innerText = conteudo.metas?.curto_prazo?.avaliacao || "N/A";
+
+        document.getElementById("meta_medio_prazo").innerText = conteudo.metas?.medio_prazo?.meta || "N/A";
+        document.getElementById("responsavel_medio").innerText = conteudo.metas?.medio_prazo?.responsavel || "N/A";
+        document.getElementById("avaliacao_medio").innerText = conteudo.metas?.medio_prazo?.avaliacao || "N/A";
+
+        document.getElementById("meta_longo_prazo").innerText = conteudo.metas?.longo_prazo?.meta || "N/A";
+        document.getElementById("responsavel_longo").innerText = conteudo.metas?.longo_prazo?.responsavel || "N/A";
+        document.getElementById("avaliacao_longo
