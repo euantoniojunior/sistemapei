@@ -310,34 +310,12 @@
     let alunoData = {};
     let conteudoData = {};
 
-    function validarCamposObrigatorios() {
-        const fields = [
-            { element: document.getElementById("nome"), label: "Nome" },
-            { element: document.getElementById("curso"), label: "Curso" },
-            { element: document.getElementById("unidade"), label: "Unidade" },
-            { element: document.getElementById("periodo"), label: "Período" },
-            { element: document.getElementById("responsavel"), label: "Responsável" }
-        ];
-
-        const missing = fields.filter(f => !f.element.value.trim());
-
-        if (missing.length > 0) {
-            msgEl.style.color = "red";
-            msgEl.innerText = "⚠️ Campos obrigatórios ausentes.";
-            return false;
-        }
-
-        return true;
-    }
-
     async function handleSubmit(event) {
         event.preventDefault();
 
-        if (!validarCamposObrigatorios()) return;
-
-        // Coleta dados do aluno
+        // Coleta dados do formulário
         alunoData = {
-            student_id: null,
+            student_id: document.getElementById("student_id").value || "",
             nome: document.getElementById("nome").value.trim(),
             curso: document.getElementById("curso").value.trim(),
             unidade: document.getElementById("unidade").value.trim(),
@@ -362,7 +340,6 @@
             gerente_unidade: document.getElementById("gerente_unidade").value || ""
         };
 
-        // Coleta conteúdo do PEI
         conteudoData = {
             objetivos_gerais: document.getElementById("objetivos_gerais").value,
             adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
@@ -386,46 +363,7 @@
             }
         };
 
-        // Armazena temporariamente
-        localStorage.setItem("peiAluno", JSON.stringify(alunoData));
-        localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
-
-        // Bloqueia campos
-        const todosCampos = document.querySelectorAll(`input, textarea, select`);
-        Array.from(todosCampos).forEach(campo => {
-            campo.readOnly = true;
-            campo.disabled = true;
-        });
-
-        // Feedback
-        msgEl.style.color = "green";
-        msgEl.innerText = "✅ Prévia salva localmente.";
-
-        // Exibe botão "Finalizar Cadastro"
-        const botoesDiv = document.getElementById("botoes-iniciais");
-        botoesDiv.innerHTML = `
-            <button type="button" onclick="finalizarCadastro()" class="btn-editar">Finalizar Cadastro</button>
-            <button type="button" onclick="location.href='/dashboard'" class="btn-voltar">Voltar</button>
-        `;
-        
-        // Abre o preview automaticamente
-        window.open('/preview', '_blank');
-    }
-
-    async function finalizarCadastro() {
-        const alunoJson = localStorage.getItem("peiAluno");
-        const conteudoJson = localStorage.getItem("peiConteudo");
-
-        if (!alunoJson || !conteudoJson) {
-            msgEl.style.color = "red";
-            msgEl.innerText = "❌ Dados não encontrados. Volte e salve novamente.";
-            return;
-        }
-
         try {
-            const alunoData = JSON.parse(alunoJson);
-            const conteudoData = JSON.parse(conteudoJson);
-
             const res = await fetch("/api/pei", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -435,17 +373,35 @@
             const data = await res.json();
             if (res.ok) {
                 msgEl.style.color = "green";
-                msgEl.innerText = "✅ Cadastro salvo com sucesso!";
-                localStorage.removeItem("peiAluno");
-                localStorage.removeItem("peiConteudo");
+                msgEl.innerText = data.message || "✅ Cadastro salvo com sucesso!";
             } else {
                 throw new Error(data.error || "Erro desconhecido");
             }
         } catch (err) {
             console.error("Erro ao salvar:", err);
             msgEl.style.color = "red";
-            msgEl.innerText = "❌ Erro ao finalizar cadastro: " + err.message;
+            msgEl.innerText = "❌ Erro ao salvar dados: " + err.message;
         }
+    }
+
+    function validarCamposObrigatorios() {
+        const fields = [
+            { element: document.getElementById("nome"), label: "Nome" },
+            { element: document.getElementById("curso"), label: "Curso" },
+            { element: document.getElementById("unidade"), label: "Unidade" },
+            { element: document.getElementById("periodo"), label: "Período" },
+            { element: document.getElementById("responsavel"), label: "Responsável" }
+        ];
+
+        const missing = fields.filter(f => !f.element.value.trim());
+
+        if (missing.length > 0) {
+            msgEl.style.color = "red";
+            msgEl.innerText = "⚠️ Campos obrigatórios ausentes.";
+            return false;
+        }
+
+        return true;
     }
 
     function limparCampos() {
@@ -453,12 +409,6 @@
         msgEl.innerText = "";
         alunoData = {};
         conteudoData = {};
-
-        const todosCampos = document.querySelectorAll(`input, textarea, select`);
-        Array.from(todosCampos).forEach(campo => {
-            campo.readOnly = false;
-            campo.disabled = false;
-        });
     }
 
     function editarCampos(editando = true) {
@@ -475,67 +425,60 @@
         });
     }
 
-   window.onload = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = urlParams.get('id');
+    window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
 
-    if (!studentId) return;
+        if (!studentId) {
+            limparCampos();
+            return;
+        }
 
-    try {
-        const res = await fetch(`/editar?id=${studentId}`);
-        const data = await res.json();
-        const aluno = data.aluno;
-        const conteudo = data.conteudo;
+        try {
+            const res = await fetch(`/api/alunos/${studentId}`);
+            const data = await res.json();
 
-        // Preenche os campos
-        document.getElementById("nome").value = aluno.nome || "";
-        document.getElementById("curso").value = aluno.curso || "";
-        document.getElementById("unidade").value = aluno.unidade || "";
-        document.getElementById("periodo").value = aluno.periodo || "";
-        document.getElementById("data_elaboracao").value = aluno.data_elaboracao || "";
-        document.getElementById("responsavel").value = aluno.responsavel || "";
-        document.getElementById("data_nascimento").value = aluno.data_nascimento || "";
-        document.getElementById("idade").value = aluno.idade || "";
-        document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
-        document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
-        document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
-        document.getElementById("psicologo").value = aluno.psicologo || "";
-        document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
-        document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
-        document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
-        document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
-        document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
-        document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao || "";
-        document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
-        document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
-        document.getElementById("supervisor").value = aluno.supervisor || "";
-        document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
+            if (!data.aluno) {
+                alert("Dados inválidos retornados da API.");
+                return;
+            }
 
-        // Conteúdo do PEI
-        if (conteudo.objetivos_gerais) document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais;
-        if (conteudo.adaptaçoes_pedagogicas) document.getElementById("adaptaçoes_pedagogicas").value = conteudo.adaptaçoes_pedagogicas;
-        if (conteudo.intervencoes_complementares) document.getElementById("intervencoes_complementares").value = conteudo.intervencoes_complementares;
+            const aluno = data.aluno;
+            const conteudo = data.conteudo;
 
-        if (conteudo.metas?.curto_prazo?.meta) document.getElementById("meta_curto_prazo").value = conteudo.metas.curto_prazo.meta;
-        if (conteudo.metas?.curto_prazo?.responsavel) document.getElementById("responsavel_curto").value = conteudo.metas.curto_prazo.responsavel;
-        if (conteudo.metas?.curto_prazo?.avaliacao) document.getElementById("avaliacao_curto").value = conteudo.metas.curto_prazo.avaliacao;
+            // Preenche os campos do aluno
+            document.getElementById("nome").value = aluno.nome || "";
+            document.getElementById("curso").value = aluno.curso || "";
+            document.getElementById("unidade").value = aluno.unidade || "";
+            document.getElementById("periodo").value = aluno.periodo || "";
+            document.getElementById("data_elaboracao").value = aluno.data_elaboracao ? aluno.data_elaboracao.split("T")[0] : "";
+            document.getElementById("responsavel").value = aluno.responsavel || "";
+            document.getElementById("data_nascimento").value = aluno.data_nascimento ? aluno.data_nascimento.split("T")[0] : "";
+            document.getElementById("idade").value = aluno.idade || "";
+            document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
+            document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
+            document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
+            document.getElementById("psicologo").value = aluno.psicologo || "";
+            document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
+            document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
+            document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
+            document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
+            document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
+            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? aluno.proxima_avaliacao.split("T")[0] : "";
+            document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
+            document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
+            document.getElementById("supervisor").value = aluno.supervisor || "";
+            document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
 
-        if (conteudo.metas?.medio_prazo?.meta) document.getElementById("meta_medio_prazo").value = conteudo.metas.medio_prazo.meta;
-        if (conteudo.metas?.medio_prazo?.responsavel) document.getElementById("responsavel_medio").value = conteudo.metas.medio_prazo.responsavel;
-        if (conteudo.metas?.medio_prazo?.avaliacao) document.getElementById("avaliacao_medio").value = conteudo.metas.medio_prazo.avaliacao;
+            // Se for edição, bloqueia alguns campos
+            editarCampos(false);
 
-        if (conteudo.metas?.longo_prazo?.meta) document.getElementById("meta_longo_prazo").value = conteudo.metas.longo_prazo.meta;
-        if (conteudo.metas?.longo_prazo?.responsavel) document.getElementById("responsavel_longo").value = conteudo.metas.longo_prazo.responsavel;
-        if (conteudo.metas?.longo_prazo?.avaliacao) document.getElementById("avaliacao_longo").value = conteudo.metas.longo_prazo.avaliacao;
-
-        editarCampos(false);  // Bloqueia campos inicialmente
-
-    } catch (err) {
-        console.error("Erro ao carregar aluno:", err);
-        msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
-        msgEl.style.color = "red";
+        } catch (err) {
+            console.error("Erro ao carregar aluno:", err);
+            msgEl.style.color = "red";
+            msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
+        }
     }
-}
 
     if (form) {
         form.addEventListener('submit', handleSubmit);
