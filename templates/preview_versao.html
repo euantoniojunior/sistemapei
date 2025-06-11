@@ -11,44 +11,56 @@
       background: white;
       color: #333; 
     }
+
     h1 {
       text-align: center;
       color: #003D7C;
     }
+
     h2 {
       color: #003D7C;
       border-left: 4px solid #F7931E;
       padding-left: 10px;
       margin-top: 25px;
     }
+
     p, li {
       font-size: 14px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
     }
+
     th, td {
-      border: 1px solid #000;
+      border: 1px solid #ccc;
       padding: 8px;
       text-align: left;
     }
+
     .assinatura {
       margin-top: 40px;
       display: flex;
       justify-content: space-between;
       flex-wrap: wrap;
     }
+
     .assinatura div {
       width: 45%;
       text-align: center;
       margin: 10px 0;
     }
+
     .actions {
       margin-top: 40px;
       text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
     }
+
     button {
       background-color: #F7931E;
       color: white;
@@ -57,24 +69,35 @@
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
-      margin: 0 10px;
       transition: background-color 0.3s ease;
     }
+
     button:hover {
       background-color: #e67e22;
     }
+
     .btn-imprimir {
       background-color: #3498db;
     }
+
     .btn-voltar {
       background-color: #003D7C;
     }
-    .btn-imprimir:hover, .btn-voltar:hover {
+
+    .btn-imprimir:hover,
+    .btn-voltar:hover {
       opacity: 0.9;
+    }
+
+    @media print {
+      .actions {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
+
   <h1>Plano Educacional Individualizado (PEI)</h1>
 
   <!-- Dados do Aluno -->
@@ -116,7 +139,12 @@
 
   <h2>6. Metas Individuais</h2>
   <table>
-    <tr><th>Período</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
+    <tr>
+      <th>Período</th>
+      <th>Meta</th>
+      <th>Responsável</th>
+      <th>Avaliação</th>
+    </tr>
     <tr>
       <td>Curto prazo</td>
       <td id="meta_curto_prazo">-</td>
@@ -170,63 +198,80 @@
   </div>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const pei_id = urlParams.get('id');
+    async function carregarVersao() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pei_id = urlParams.get('id');
+      const history_id = urlParams.get('history_id');
 
-    if (!pei_id) {
-      document.body.innerHTML = "<h2>⚠️ Nenhuma versão selecionada.</h2>";
-    } else {
-      fetch(`/api/pei/${pei_id}`)
-        .then(res => res.json())
-        .then(data => {
-          const aluno = data.aluno;
-          const conteudo = data.conteudo;
+      if (!pei_id && !history_id) {
+        document.body.innerHTML = "<h2>⚠️ Nenhuma versão selecionada.</h2>";
+        return;
+      }
 
-          document.getElementById("nome").textContent = aluno.nome || "N/A";
-          document.getElementById("curso").textContent = aluno.curso || "N/A";
-          document.getElementById("unidade").textContent = aluno.unidade || "N/A";
-          document.getElementById("periodo").textContent = aluno.periodo || "N/A";
-          document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
-          document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
+      try {
+        const endpoint = history_id ? `/api/pei/historico/versao/${history_id}` : `/api/pei/versao/${pei_id}`;
+        const res = await fetch(endpoint);
+        const data = await res.json();
 
-          document.getElementById("data_nascimento").textContent = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString() : "N/A";
-          document.getElementById("idade").textContent = aluno.idade || "N/A";
-          document.getElementById("diagnostico_cid").textContent = aluno.diagnostico_cid || "N/A";
-          document.getElementById("transtorno_identificado").textContent = aluno.transtorno_identificado || "N/A";
-          document.getElementById("laudo_medico").textContent = aluno.laudo_medico || "N/A";
-          document.getElementById("psicologo").textContent = aluno.psicologo || "N/A";
-          document.getElementById("psiquiatra").textContent = aluno.psiquiatra || "N/A";
-          document.getElementById("psicopedagogo").textContent = aluno.psicopedagogo || "N/A";
-          document.getElementById("outros_profissionais").textContent = aluno.outros_profissionais || "N/A";
-          document.getElementById("perfil_aluno").textContent = aluno.perfil_aluno || "N/A";
-          document.getElementById("objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
-          document.getElementById("adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
-          document.getElementById("intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
+        if (!res.ok || !data.aluno) {
+          throw new Error(data.error || "Erro ao carregar dados");
+        }
 
-          document.getElementById("meta_curto_prazo").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.meta) || "N/A";
-          document.getElementById("responsavel_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.responsavel) || "N/A";
-          document.getElementById("avaliacao_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.avaliacao) || "N/A";
+        const aluno = data.aluno;
+        const conteudo = data.conteudo;
 
-          document.getElementById("meta_medio_prazo").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.meta) || "N/A";
-          document.getElementById("responsavel_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.responsavel) || "N/A";
-          document.getElementById("avaliacao_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.avaliacao) || "N/A";
+        // Preenche os campos do aluno
+        document.getElementById("nome").textContent = aluno.nome || "N/A";
+        document.getElementById("curso").textContent = aluno.curso || "N/A";
+        document.getElementById("unidade").textContent = aluno.unidade || "N/A";
+        document.getElementById("periodo").textContent = aluno.periodo || "N/A";
+        document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
+        document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
 
-          document.getElementById("meta_longo_prazo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.meta) || "N/A";
-          document.getElementById("responsavel_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.responsavel) || "N/A";
-          document.getElementById("avaliacao_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.avaliacao) || "N/A";
+        document.getElementById("data_nascimento").textContent = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString() : "N/A";
+        document.getElementById("idade").textContent = aluno.idade || "N/A";
+        document.getElementById("diagnostico_cid").textContent = aluno.diagnostico_cid || "N/A";
+        document.getElementById("transtorno_identificado").textContent = aluno.transtorno_identificado || "N/A";
+        document.getElementById("laudo_medico").textContent = aluno.laudo_medico || "N/A";
+        document.getElementById("psicologo").textContent = aluno.psicologo || "N/A";
+        document.getElementById("psiquiatra").textContent = aluno.psiquiatra || "N/A";
+        document.getElementById("psicopedagogo").textContent = aluno.psicopedagogo || "N/A";
+        document.getElementById("outros_profissionais").textContent = aluno.outros_profissionais || "N/A";
+        document.getElementById("perfil_aluno").textContent = aluno.perfil_aluno || "N/A";
+        document.getElementById("observacoes_gerais").textContent = aluno.observacoes_gerais || "N/A";
+        document.getElementById("proxima_avaliacao").textContent = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
+        document.getElementById("responsavel_legal").textContent = aluno.responsavel_legal || "N/A";
+        document.getElementById("orientador_responsavel").textContent = aluno.orientador_responsavel || "N/A";
+        document.getElementById("supervisor").textContent = aluno.supervisor || "N/A";
+        document.getElementById("gerente_unidade").textContent = aluno.gerente_unidade || "N/A";
 
-          document.getElementById("observacoes_gerais").textContent = aluno.observacoes_gerais || "N/A";
-          document.getElementById("proxima_avaliacao").textContent = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
-          document.getElementById("responsavel_legal").textContent = aluno.responsavel_legal || "N/A";
-          document.getElementById("orientador_responsavel").textContent = aluno.orientador_responsavel || "N/A";
-          document.getElementById("supervisor").textContent = aluno.supervisor || "N/A";
-          document.getElementById("gerente_unidade").textContent = aluno.gerente_unidade || "N/A";
-        })
-        .catch(err => {
-          console.error("Erro ao carregar versão:", err);
-          document.body.innerHTML = "<h2>❌ Erro ao carregar versão do PEI.</h2>";
-        });
+        // Preenche as metas
+        document.getElementById("meta_curto_prazo").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.meta) || "N/A";
+        document.getElementById("responsavel_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.responsavel) || "N/A";
+        document.getElementById("avaliacao_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.avaliacao) || "N/A";
+
+        document.getElementById("meta_medio_prazo").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.meta) || "N/A";
+        document.getElementById("responsavel_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.responsavel) || "N/A";
+        document.getElementById("avaliacao_medio").textContent = (conteudo.metas && conteudo.metas.medio_prazo && conteudo.metas.medio_prazo.avaliacao) || "N/A";
+
+        document.getElementById("meta_longo_prazo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.meta) || "N/A";
+        document.getElementById("responsavel_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.responsavel) || "N/A";
+        document.getElementById("avaliacao_longo").textContent = (conteudo.metas && conteudo.metas.longo_prazo && conteudo.metas.longo_prazo.avaliacao) || "N/A";
+
+        document.getElementById("objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
+        document.getElementById("adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
+        document.getElementById("intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
+
+      } catch (err) {
+        console.error("Erro ao carregar versão:", err);
+        document.body.innerHTML = `<h2>❌ Erro ao carregar versão do PEI: ${err.message}</h2>`;
+      }
     }
+
+    window.onload = () => {
+      carregarVersao();
+    };
   </script>
+
 </body>
 </html>
