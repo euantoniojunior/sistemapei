@@ -9,6 +9,7 @@ import os
 
 pei_bp = Blueprint('pei', __name__)
 
+# Configurações de upload
 UPLOAD_FOLDER = 'static/laudos'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 
@@ -47,9 +48,7 @@ def criar_pei():
             aluno = Student.query.get(int(student_id))
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
-            # Atualiza campos editáveis...
         else:
-            # Cria novo aluno
             aluno = Student(
                 nome=aluno_data.get('nome'),
                 curso=aluno_data.get('curso'),
@@ -75,7 +74,15 @@ def criar_pei():
                 gerente_unidade=aluno_data.get('gerente_unidade')
             )
             db.session.add(aluno)
-            db.session.flush()  # Garante ID antes de salvar PEI
+            db.session.flush()
+
+        # Upload opcional de laudo médico
+        if 'laudo_medico_arquivo' in request.files:
+            file = request.files['laudo_medico_arquivo']
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                aluno.laudo_medico_arquivo = filename
 
         # Salva conteúdo do PEI como JSON
         pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
@@ -140,6 +147,83 @@ def buscar_aluno_por_id(student_id):
     return jsonify(aluno_dict), 200
 
 
+# ✅ Nova rota: Buscar todos os alunos por nome (usada em search.html)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def buscar_alunos():
+    nome = request.args.get('nome')
+    if not nome:
+        return jsonify({"error": "Nome é obrigatório"}), 400
+
+    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'unidade': a.unidade,
+        'periodo': a.periodo,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
+        'responsavel': a.responsavel,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else None,
+        'idade': a.idade,
+        'diagnostico_cid': a.diagnostico_cid,
+        'transtorno_identificado': a.transtorno_identificado,
+        'laudo_medico': a.laudo_medico,
+        'psicologo': a.psicologo,
+        'psiquiatra': a.psiquiatra,
+        'psicopedagogo': a.psicopedagogo,
+        'outros_profissionais': a.outros_profissionais,
+        'perfil_aluno': a.perfil_aluno,
+        'observacoes_gerais': a.observacoes_gerais,
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else None,
+        'responsavel_legal': a.responsavel_legal,
+        'orientador_responsavel': a.orientador_responsavel,
+        'supervisor': a.supervisor,
+        'gerente_unidade': a.gerente_unidade
+    } for a in alunos]), 200
+
+
+# ✅ Nova rota: Buscar todas as versões de um aluno (histórico)
+@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
+def get_historico_pei(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+
+    return jsonify([{
+        'historico_id': h.id,
+        'pei_id': h.pei_id,
+        'editado_por': h.editado_por,
+        'data_edicao': h.data_edicao.isoformat(),
+        'conteudo_novo': json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
+    } for h in historico]), 200
+
+
+# ✅ Nova rota: Buscar uma versão específica do PEI (para preview_versao.html)
+@pei_bp.route('/api/pei/versao/<int:pei_id>', methods=['GET'])
+def get_pei_by_id(pei_id):
+    pei = PEI.query.get(pei_id)
+    if not pei:
+        return jsonify({"error": "Versão do PEI não encontrada"}), 404
+
+    aluno = Student.query.get(pei.student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    try:
+        conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
+    except:
+        conteudo = {}
+
+    return jsonify({
+        'aluno': aluno.to_dict(),
+        'conteudo': conteudo,
+        'pei_id': pei.id,
+        'data_registro': pei.data_registro.isoformat()
+    }), 200
+
+
 # ✅ Nova rota: Gerar PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
@@ -164,8 +248,8 @@ def gerar_pdf():
         <img src="{{ logo_url }}" alt="Logo Senac">
         <h1>Plano Educacional Individualizado (PEI)</h1>
     </div>
-    <p><strong>Nome:</strong> {{ nome }}</p>
-    <p><strong>Curso:</strong> {{ curso }}</p>
+    <p><strong>Nome:</strong> {{ aluno.nome }}</p>
+    <p><strong>Curso:</strong> {{ aluno.curso }}</p>
     <p><strong>Objetivos Gerais:</strong> {{ objetivos_gerais }}</p>
     <h2>Metas Individuais</h2>
     <table>
@@ -187,20 +271,20 @@ def gerar_pdf():
     </body></html>
     """
 
-    rendered = render_template_string(template, logo_url=logo_url, **dados)
-
-    options = {
-        'encoding': 'utf-8',
-        'enable-local-file-access': '',
-        'no-stop-slow-scripts': ''
-    }
-
     try:
+        rendered = render_template_string(template, **dados, logo_url=logo_url)
+        options = {
+            'encoding': 'utf-8',
+            'enable-local-file-access': '',
+            'no-stop-slow-scripts': ''
+        }
         pdf = pdfkit.from_string(rendered, False, options=options)
+
         return pdf, 200, {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': f"attachment; filename=pei_{dados.get('nome', 'aluno')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            'Content-Disposition': f"attachment; filename=pei_{dados.get('aluno', {}).get('nome', 'aluno')}_{datetime.now().strftime('%Y%m%d')}.pdf"
         }
+
     except Exception as e:
         return jsonify({
             "error": "Erro ao gerar PDF",
