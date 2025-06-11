@@ -162,30 +162,45 @@ def buscar_aluno_por_id(student_id):
         return jsonify({"error": "Aluno não encontrado"}), 404
 
     pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
-    aluno_dict = aluno.to_dict()
 
+    aluno_dict = {
+        'id': aluno.id,
+        'nome': aluno.nome,
+        'curso': aluno.curso,
+        'unidade': aluno.unidade,
+        'periodo': aluno.periodo,
+        'data_elaboracao': aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else None,
+        'responsavel': aluno.responsavel,
+        'data_nascimento': aluno.data_nascimento.isoformat() if aluno.data_nascimento else None,
+        'idade': aluno.idade,
+        'diagnostico_cid': aluno.diagnostico_cid,
+        'transtorno_identificado': aluno.transtorno_identificado,
+        'laudo_medico': aluno.laudo_medico,
+        'psicologo': aluno.psicologo,
+        'psiquiatra': aluno.psiquiatra,
+        'psicopedagogo': aluno.psicopedagogo,
+        'outros_profissionais': aluno.outros_profissionais,
+        'perfil_aluno': aluno.perfil_aluno,
+        'observacoes_gerais': aluno.observacoes_gerais,
+        'proxima_avaliacao': aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else None,
+        'responsavel_legal': aluno.responsavel_legal,
+        'orientador_responsavel': aluno.orientador_responsavel,
+        'supervisor': aluno.supervisor,
+        'gerente_unidade': aluno.gerente_unidade,
+        'laudo_medico_arquivo': aluno.laudo_medico_arquivo
+    }
+
+    conteudo = {}
     if pei:
         try:
             conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
-            aluno_dict.update({
-                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
-                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
-                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
-                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
-                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
-                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
-                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
-                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
-                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
-                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
-                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
-                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
-            })
-        except Exception as e:
-            print("Erro ao processar conteúdo do PEI:", e)
+        except:
+            conteudo = {}
 
-    return jsonify(aluno_dict), 200
-
+    return jsonify({
+        'aluno': aluno_dict,
+        'conteudo': conteudo
+    })
 
 # ✅ Nova rota: Buscar uma versão específica do PEI
 @pei_bp.route('/api/pei/versao/<int:pei_id>', methods=['GET'])
