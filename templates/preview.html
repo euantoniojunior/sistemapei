@@ -31,11 +31,11 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         th, td {
-            border: 1px solid #000;
+            border: 1px solid #ccc;
             padding: 8px;
             text-align: left;
         }
@@ -58,18 +58,21 @@
             margin-top: 30px;
         }
 
-        .btn-imprimir {
+        .btn-imprimir,
+        .btn-exportar {
             background-color: #F7931E;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 10px 16px;
+            font-size: 14px;
             border-radius: 6px;
             cursor: pointer;
+            margin: 0 10px;
             transition: background-color 0.3s ease;
         }
 
-        .btn-imprimir:hover {
+        .btn-imprimir:hover,
+        .btn-exportar:hover {
             background-color: #e67e22;
         }
 
@@ -84,7 +87,7 @@
 
 <h1>Plano Educacional Individualizado (PEI)</h1>
 
-<!-- Identificação -->
+<!-- Dados do Aluno -->
 <h2>1. Identificação do Aluno</h2>
 <p><strong>Nome:</strong> <span id="nome"></span></p>
 <p><strong>Curso:</strong> <span id="curso"></span></p>
@@ -93,29 +96,64 @@
 <p><strong>Data de Elaboração:</strong> <span id="data_elaboracao"></span></p>
 <p><strong>Responsável:</strong> <span id="responsavel"></span></p>
 
-<!-- Metas -->
-<h2>2. Metas Individuais</h2>
-<table>
-    <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
-    <tr><td>Curto prazo</td><td id="meta_curto_prazo"></td><td id="responsavel_curto"></td><td id="avaliacao_curto"></td></tr>
-    <tr><td>Médio prazo</td><td id="meta_medio_prazo"></td><td id="responsavel_medio"></td><td id="avaliacao_medio"></td></tr>
-    <tr><td>Longo prazo</td><td id="meta_longo_prazo"></td><td id="responsavel_longo"></td><td id="avaliacao_longo"></td></tr>
-</table>
+<!-- Profissionais -->
+<h2>2. Profissionais Envolvidos</h2>
+<p><strong>Psicólogo:</strong> <span id="psicologo"></span></p>
+<p><strong>Psiquiatra:</strong> <span id="psiquiatra"></span></p>
+<p><strong>Psicopedagogo:</strong> <span id="psicopedagogo"></span></p>
+<p><strong>Outros profissionais:</strong> <span id="outros_profissionais"></span></p>
 
-<!-- Conteúdo -->
-<h2>3. Objetivos Gerais</h2>
-<p id="objetivos_gerais"></p>
-
-<h2>4. Adaptações Pedagógicas</h2>
-<p id="adaptaçoes_pedagogicas"></p>
-
-<h2>5. Intervenções Complementares</h2>
-<p id="intervencoes_complementares"></p>
-
-<h2>6. Perfil do Aluno</h2>
+<!-- Perfil do Aluno -->
+<h2>3. Perfil do Aluno</h2>
 <p id="perfil_aluno"></p>
 
-<h2>7. Acompanhamento e Revisão do PEI</h2>
+<!-- Objetivos Gerais -->
+<h2>4. Objetivos Gerais</h2>
+<p id="objetivos_gerais"></p>
+
+<!-- Adaptações Pedagógicas -->
+<h2>5. Adaptações Pedagógicas</h2>
+<p id="adaptaçoes_pedagogicas"></p>
+
+<!-- Intervenções Complementares -->
+<h2>6. Intervenções Complementares</h2>
+<p id="intervencoes_complementares"></p>
+
+<!-- Metas Individuais -->
+<h2>7. Metas Individuais</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Método</th>
+            <th>Meta</th>
+            <th>Responsável</th>
+            <th>Avaliação</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Curto prazo</td>
+            <td id="meta_curto_prazo"></td>
+            <td id="responsavel_curto"></td>
+            <td id="avaliacao_curto"></td>
+        </tr>
+        <tr>
+            <td>Médio prazo</td>
+            <td id="meta_medio_prazo"></td>
+            <td id="responsavel_medio"></td>
+            <td id="avaliacao_medio"></td>
+        </tr>
+        <tr>
+            <td>Longo prazo</td>
+            <td id="meta_longo_prazo"></td>
+            <td id="responsavel_longo"></td>
+            <td id="avaliacao_longo"></td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Acompanhamento -->
+<h2>8. Acompanhamento e Revisão do PEI</h2>
 <p><strong>Observações gerais:</strong> <span id="observacoes_gerais"></span></p>
 <p><strong>Data da próxima avaliação:</strong> <span id="proxima_avaliacao"></span></p>
 
@@ -143,7 +181,7 @@
     </div>
 </div>
 
-<!-- Botão de impressão -->
+<!-- Botões -->
 <div class="actions">
     <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
 </div>
@@ -158,33 +196,23 @@
             return;
         }
 
-        // Preenche os dados do aluno
+        // Preenche dados do aluno
         document.getElementById("nome").innerText = aluno.nome || "N/A";
         document.getElementById("curso").innerText = aluno.curso || "N/A";
         document.getElementById("unidade").innerText = aluno.unidade || "N/A";
         document.getElementById("periodo").innerText = aluno.periodo || "N/A";
         document.getElementById("data_elaboracao").innerText = aluno.data_elaboracao || "N/A";
         document.getElementById("responsavel").innerText = aluno.responsavel || "N/A";
-        document.getElementById("data_nascimento").innerText = aluno.data_nascimento || "N/A";
-        document.getElementById("idade").innerText = aluno.idade || "N/A";
-        document.getElementById("diagnostico_cid").innerText = aluno.diagnostico_cid || "N/A";
-        document.getElementById("transtorno_identificado").innerText = aluno.transtorno_identificado || "N/A";
         document.getElementById("psicologo").innerText = aluno.psicologo || "N/A";
         document.getElementById("psiquiatra").innerText = aluno.psiquiatra || "N/A";
         document.getElementById("psicopedagogo").innerText = aluno.psicopedagogo || "N/A";
         document.getElementById("outros_profissionais").innerText = aluno.outros_profissionais || "N/A";
 
-        // Preenche os dados do conteúdo do PEI
+        // Conteúdo do PEI
+        document.getElementById("perfil_aluno").innerText = aluno.perfil_aluno || "N/A";
         document.getElementById("objetivos_gerais").innerText = conteudo.objetivos_gerais || "N/A";
         document.getElementById("adaptaçoes_pedagogicas").innerText = conteudo.adaptaçoes_pedagogicas || "N/A";
         document.getElementById("intervencoes_complementares").innerText = conteudo.intervencoes_complementares || "N/A";
-        document.getElementById("perfil_aluno").innerText = aluno.perfil_aluno || "N/A";
-        document.getElementById("observacoes_gerais").innerText = aluno.observacoes_gerais || "N/A";
-        document.getElementById("proxima_avaliacao").innerText = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
-        document.getElementById("responsavel_legal").innerText = aluno.responsavel_legal || "N/A";
-        document.getElementById("orientador_responsavel").innerText = aluno.orientador_responsavel || "N/A";
-        document.getElementById("supervisor").innerText = aluno.supervisor || "N/A";
-        document.getElementById("gerente_unidade").innerText = aluno.gerente_unidade || "N/A";
 
         // Metas
         document.getElementById("meta_curto_prazo").innerText = conteudo.metas?.curto_prazo?.meta || "N/A";
@@ -198,6 +226,14 @@
         document.getElementById("meta_longo_prazo").innerText = conteudo.metas?.longo_prazo?.meta || "N/A";
         document.getElementById("responsavel_longo").innerText = conteudo.metas?.longo_prazo?.responsavel || "N/A";
         document.getElementById("avaliacao_longo").innerText = conteudo.metas?.longo_prazo?.avaliacao || "N/A";
+
+        // Observações e datas
+        document.getElementById("observacoes_gerais").innerText = aluno.observacoes_gerais || "N/A";
+        document.getElementById("proxima_avaliacao").innerText = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
+        document.getElementById("responsavel_legal").innerText = aluno.responsavel_legal || "N/A";
+        document.getElementById("orientador_responsavel").innerText = aluno.orientador_responsavel || "N/A";
+        document.getElementById("supervisor").innerText = aluno.supervisor || "N/A";
+        document.getElementById("gerente_unidade").innerText = aluno.gerente_unidade || "N/A";
     };
 </script>
 
