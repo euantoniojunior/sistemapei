@@ -335,37 +335,31 @@
 
         if (!validarCamposObrigatorios()) return;
 
-        const nome = document.getElementById("nome");
-        const curso = document.getElementById("curso");
-        const unidade = document.getElementById("unidade");
-        const periodo = document.getElementById("periodo");
-        const data_elaboracao = document.getElementById("data_elaboracao");
-        const responsavel = document.getElementById("responsavel");
-
+        // Pega todos os dados do formulário
         alunoData = {
-            student_id: alunoData.id || "",
-            nome: nome.value.trim(),
-            curso: curso.value.trim(),
-            unidade: unidade.value.trim(),
-            periodo: periodo.value.trim(),
-            data_elaboracao: data_elaboracao.value,
-            responsavel: responsavel.value.trim(),
-            data_nascimento: document.getElementById("data_nascimento")?.value || "",
-            idade: document.getElementById("idade")?.value || "",
-            diagnostico_cid: document.getElementById("diagnostico_cid")?.value || "",
-            transtorno_identificado: document.getElementById("transtorno_identificado")?.value || "",
-            laudo_medico: document.getElementById("laudo_medico")?.value || "",
-            psicologo: document.getElementById("psicologo")?.value || "",
-            psiquiatra: document.getElementById("psiquiatra")?.value || "",
-            psicopedagogo: document.getElementById("psicopedagogo")?.value || "",
-            outros_profissionais: document.getElementById("outros_profissionais")?.value || "",
-            perfil_aluno: document.getElementById("perfil_aluno")?.value || "",
-            observacoes_gerais: document.getElementById("observacoes_gerais")?.value || "",
-            proxima_avaliacao: document.getElementById("proxima_avaliacao")?.value || "",
-            responsavel_legal: document.getElementById("responsavel_legal")?.value || "",
-            orientador_responsavel: document.getElementById("orientador_responsavel")?.value || "",
-            supervisor: document.getElementById("supervisor")?.value || "",
-            gerente_unidade: document.getElementById("gerente_unidade")?.value || ""
+            student_id: null,
+            nome: document.getElementById("nome").value.trim(),
+            curso: document.getElementById("curso").value.trim(),
+            unidade: document.getElementById("unidade").value.trim(),
+            periodo: document.getElementById("periodo").value.trim(),
+            data_elaboracao: document.getElementById("data_elaboracao").value,
+            responsavel: document.getElementById("responsavel").value.trim(),
+            data_nascimento: document.getElementById("data_nascimento").value || "",
+            idade: document.getElementById("idade").value || "",
+            diagnostico_cid: document.getElementById("diagnostico_cid").value || "",
+            transtorno_identificado: document.getElementById("transtorno_identificado").value || "",
+            laudo_medico: document.getElementById("laudo_medico").value || "",
+            psicologo: document.getElementById("psicologo").value || "",
+            psiquiatra: document.getElementById("psiquiatra").value || "",
+            psicopedagogo: document.getElementById("psicopedagogo").value || "",
+            outros_profissionais: document.getElementById("outros_profissionais").value || "",
+            perfil_aluno: document.getElementById("perfil_aluno").value || "",
+            observacoes_gerais: document.getElementById("observacoes_gerais").value || "",
+            proxima_avaliacao: document.getElementById("proxima_avaliacao").value || "",
+            responsavel_legal: document.getElementById("responsavel_legal").value || "",
+            orientador_responsavel: document.getElementById("orientador_responsavel").value || "",
+            supervisor: document.getElementById("supervisor").value || "",
+            gerente_unidade: document.getElementById("gerente_unidade").value || ""
         };
 
         conteudoData = {
@@ -391,7 +385,43 @@
             }
         };
 
+        // Bloqueia campos
+        const todosCampos = document.querySelectorAll(`input, textarea, select`);
+        Array.from(todosCampos).forEach(campo => {
+            campo.readOnly = true;
+            campo.disabled = true;
+        });
+
+        // Armazena temporariamente no localStorage
+        localStorage.setItem("peiAluno", JSON.stringify(alunoData));
+        localStorage.setItem("peiConteudo", JSON.stringify(conteudoData));
+
+        // Feedback
+        msgEl.style.color = "green";
+        msgEl.innerText = "✅ Dados salvo localmente. Clique em 'Finalizar Cadastro'.";
+
+        // Exibe botão Finalizar Cadastro
+        const botoesDiv = document.getElementById("botoes-iniciais");
+        botoesDiv.innerHTML = `
+            <button type="button" onclick="finalizarCadastro()" class="btn-finalizar">Finalizar Cadastro</button>
+            <button type="button" onclick="location.href='/dashboard'" class="btn-voltar">Voltar</button>
+        `;
+    }
+
+    async function finalizarCadastro() {
+        const alunoJson = localStorage.getItem("peiAluno");
+        const conteudoJson = localStorage.getItem("peiConteudo");
+
+        if (!alunoJson || !conteudoJson) {
+            msgEl.style.color = "red";
+            msgEl.innerText = "❌ Dados não encontrados. Salve novamente antes de finalizar.";
+            return;
+        }
+
         try {
+            const alunoData = JSON.parse(alunoJson);
+            const conteudoData = JSON.parse(conteudoJson);
+
             const res = await fetch("/api/pei", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -401,19 +431,20 @@
             const data = await res.json();
             if (res.ok) {
                 msgEl.style.color = "green";
-                msgEl.innerText = data.message || "✅ Cadastro salvo com sucesso!";
+                msgEl.innerText = "✅ Cadastro salvo com sucesso!";
+                localStorage.removeItem("peiAluno");
+                localStorage.removeItem("peiConteudo");
+
+                // Abre preview
+                window.open('/preview', '_blank');
+
             } else {
                 throw new Error(data.error || "Erro desconhecido");
             }
         } catch (err) {
-            console.error("Erro ao salvar:", err);
             msgEl.style.color = "red";
-            msgEl.innerText = "❌ Erro ao salvar dados: " + err.message;
+            msgEl.innerText = "❌ Erro ao finalizar cadastro: " + err.message;
         }
-    }
-
-    if (form) {
-        form.addEventListener('submit', handleSubmit);
     }
 
     function limparCampos() {
@@ -447,13 +478,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const studentId = urlParams.get('id');
 
-        // Se não tem ID na URL, liberar todos os campos para cadastro novo
         if (!studentId) {
             limparCampos();
-            return;  // Sai da função aqui, sem carregar dados nem bloquear campos
+            return;
         }
 
-        // Se tem ID, carrega os dados do aluno e mantém campos bloqueados
         try {
             const res = await fetch(`/api/alunos/${studentId}`);
             const aluno = await res.json();
@@ -481,14 +510,16 @@
             document.getElementById("supervisor").value = aluno.supervisor || "";
             document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
 
-            // Apenas bloqueia os campos se for edição
             editarCampos(false);
-
         } catch (err) {
             console.error("Erro ao carregar aluno:", err);
-            document.getElementById("msg").innerText = "❌ Erro ao carregar dados do aluno.";
-            document.getElementById("msg").style.color = "red";
+            msgEl.style.color = "red";
+            msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
         }
+    }
+
+    if (form) {
+        form.addEventListener('submit', handleSubmit);
     }
 </script>
 
