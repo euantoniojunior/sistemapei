@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, render_template_string
+from flask import Blueprint, request, jsonify, render_template_string, session
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
@@ -9,7 +9,7 @@ import os
 
 pei_bp = Blueprint('pei', __name__)
 
-# Configurações de upload
+# Pasta de uploads
 UPLOAD_FOLDER = 'static/laudos'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 
@@ -17,6 +17,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def parse_date(date_str):
+    """Converte string de data para objeto date"""
     if not date_str:
         return None
     try:
@@ -24,10 +25,12 @@ def parse_date(date_str):
     except ValueError:
         return None
 
+
 # ✅ Rota principal: Salvar ou editar um PEI
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
+        # Detecta tipo de conteúdo (JSON ou form-data)
         if request.is_json:
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -42,7 +45,7 @@ def criar_pei():
             aluno_data = json.loads(aluno_json)
             conteudo_data = json.loads(conteudo_json)
 
-        student_id = aluno_data.get('student_id')  # ← Usando o campo certo!
+        student_id = aluno_data.get('student_id')
 
         if student_id and str(student_id).isdigit():
             aluno = Student.query.get(int(student_id))
@@ -84,7 +87,7 @@ def criar_pei():
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 aluno.laudo_medico_arquivo = filename
 
-        # Salva conteúdo do PEI como JSON
+        # Salva o conteúdo do PEI
         pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
         db.session.add(pei)
 
@@ -92,6 +95,7 @@ def criar_pei():
         historico = PEIHistory(
             pei_id=pei.id,
             editado_por=session.get('user_id') or 1,
+            student_id=aluno.id,
             conteudo_anterior="{}",
             conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
         )
@@ -114,40 +118,7 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por ID (para edição)
-@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
-def buscar_aluno_por_id(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
-    aluno_dict = aluno.to_dict()
-
-    if pei:
-        try:
-            conteudo = pei.get_conteudo()
-            aluno_dict.update({
-                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
-                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
-                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
-                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
-                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
-                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
-                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
-                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
-                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
-                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
-                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
-                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
-            })
-        except Exception as e:
-            print("Erro ao processar conteúdo do PEI:", e)
-
-    return jsonify(aluno_dict), 200
-
-
-# ✅ Nova rota: Buscar todos os alunos por nome (usada em search.html)
+# ✅ Nova rota: Busca alunos por nome (usada em search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
     nome = request.args.get('nome')
@@ -155,6 +126,7 @@ def buscar_alunos():
         return jsonify({"error": "Nome é obrigatório"}), 400
 
     alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+
     return jsonify([{
         'id': a.id,
         'nome': a.nome,
@@ -182,27 +154,42 @@ def buscar_alunos():
     } for a in alunos]), 200
 
 
-# ✅ Nova rota: Buscar todas as versões de um aluno (histórico)
-@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
-def get_historico_pei(student_id):
+# ✅ Nova rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
     aluno = Student.query.get(student_id)
     if not aluno:
         return jsonify({"error": "Aluno não encontrado"}), 404
 
-    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
+    aluno_dict = aluno.to_dict()
 
-    return jsonify([{
-        'historico_id': h.id,
-        'pei_id': h.pei_id,
-        'editado_por': h.editado_por,
-        'data_edicao': h.data_edicao.isoformat(),
-        'conteudo_novo': json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
-    } for h in historico]), 200
+    if pei:
+        try:
+            conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
+            aluno_dict.update({
+                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
+                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
+                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
+                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
+                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
+                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
+                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
+                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
+                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
+                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
+                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
+                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
+            })
+        except Exception as e:
+            print("Erro ao processar conteúdo do PEI:", e)
+
+    return jsonify(aluno_dict), 200
 
 
-# ✅ Nova rota: Buscar uma versão específica do PEI (para preview_versao.html)
+# ✅ Nova rota: Buscar uma versão específica do PEI
 @pei_bp.route('/api/pei/versao/<int:pei_id>', methods=['GET'])
-def get_pei_by_id(pei_id):
+def get_pei_completo(pei_id):
     pei = PEI.query.get(pei_id)
     if not pei:
         return jsonify({"error": "Versão do PEI não encontrada"}), 404
@@ -224,7 +211,63 @@ def get_pei_by_id(pei_id):
     }), 200
 
 
-# ✅ Nova rota: Gerar PDF do PEI
+# ✅ Nova rota: Buscar histórico de alterações de um aluno
+@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
+def get_historico_pei(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+
+    resultado = []
+    for h in historico:
+        try:
+            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
+        except:
+            conteudo = {}
+
+        resultado.append({
+            'historico_id': h.id,
+            'pei_id': h.pei_id,
+            'student_id': h.student_id,
+            'editado_por': h.editado_por,
+            'data_edicao': h.data_edicao.isoformat(),
+            'conteudo': conteudo
+        })
+
+    return jsonify(resultado), 200
+
+
+# ✅ Nova rota: Buscar versão do histórico do PEI
+@pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
+def get_versao_historico(history_id):
+    historia = PEIHistory.query.get(history_id)
+    if not historia:
+        return jsonify({"error": "Versão do PEI não encontrada"}), 404
+
+    try:
+        conteudo = json.loads(historia.conteudo_novo) if isinstance(historia.conteudo_novo, str) else historia.conteudo_novo
+    except:
+        return jsonify({"error": "Erro ao carregar conteúdo do histórico"}), 500
+
+    aluno_id = conteudo.get('student_id', historia.student_id)
+    aluno = Student.query.get(aluno_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    return jsonify({
+        'aluno': aluno.to_dict(),
+        'conteudo': conteudo,
+        'historico_id': historia.id,
+        'pei_id': historia.pei_id,
+        'student_id': aluno.id,
+        'data_edicao': historia.data_edicao.isoformat(),
+        'usuario': f"Usuário {historia.editado_por}"
+    }), 200
+
+
+# ✅ Nova rota: Exportação de PDF do PEI
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
@@ -239,10 +282,11 @@ def gerar_pdf():
     .header {text-align: center;margin-bottom: 30px;}
     .header img {max-width: 160px;margin-bottom: 10px;}
     h1 {color: #003D7C;font-size: 24px;margin-top: 0;text-align: center;}
-    h2 {color: #003D7C;font-size: 18px;}
-    table {width: 100%;border-collapse: collapse;margin: 20px 0;}
-    th, td {border: 1px solid #ccc;padding: 10px;text-align: left;}
-    .assinatura {display: flex;justify-content: space-between;margin-top: 40px;}
+    h2 {color: #003D7C;font-size: 18px;border-left: 4px solid #F7931E;padding-left: 10px;margin-top: 25px;}
+    table {width: 100%;border-collapse: collapse;margin-top: 20px;}
+    th, td {border: 1px solid #ccc;padding: 8px;text-align: left;}
+    .assinatura {margin-top: 40px;display: flex;justify-content: space-between;flex-wrap: wrap;}
+    .assinatura div {width: 45%;text-align: center;margin: 10px 0;}
     </style></head><body>
     <div class="header">
         <img src="{{ logo_url }}" alt="Logo Senac">
@@ -262,29 +306,34 @@ def gerar_pdf():
     <p>{{ adaptaçoes_pedagogicas }}</p>
     <h2>Intervenções Complementares</h2>
     <p>{{ intervencoes_complementares }}</p>
+    <h2>Perfil do Aluno</h2>
+    <p>{{ perfil_aluno }}</p>
+    <h2>Acompanhamento e Revisão do PEI</h2>
+    <p><strong>Observações gerais:</strong> {{ observacoes_gerais }}</p>
+    <p><strong>Data da próxima avaliação:</strong> {{ proxima_avaliacao }}</p>
     <div class="assinatura">
-        <div>Responsável Legal<br>__________________________</div>
-        <div>Orientador Responsável<br>__________________________</div>
-        <div>Supervisor<br>__________________________</div>
-        <div>Gerente de Unidade<br>__________________________</div>
+        <div>Responsável Legal<br>__________________________<br>{{ responsavel_legal }}</div>
+        <div>Orientador Responsável<br>__________________________<br>{{ orientador_responsavel }}</div>
+        <div>Supervisor<br>__________________________<br>{{ supervisor }}</div>
+        <div>Gerente de Unidade<br>__________________________<br>{{ gerente_unidade }}</div>
     </div>
     </body></html>
     """
 
-    try:
-        rendered = render_template_string(template, **dados, logo_url=logo_url)
-        options = {
-            'encoding': 'utf-8',
-            'enable-local-file-access': '',
-            'no-stop-slow-scripts': ''
-        }
-        pdf = pdfkit.from_string(rendered, False, options=options)
+    rendered = render_template_string(template, logo_url=logo_url, **dados)
 
+    options = {
+        'encoding': 'utf-8',
+        'enable-local-file-access': '',
+        'no-stop-slow-scripts': ''
+    }
+
+    try:
+        pdf = pdfkit.from_string(rendered, False, options=options)
         return pdf, 200, {
             'Content-Type': 'application/pdf',
             'Content-Disposition': f"attachment; filename=pei_{dados.get('aluno', {}).get('nome', 'aluno')}_{datetime.now().strftime('%Y%m%d')}.pdf"
         }
-
     except Exception as e:
         return jsonify({
             "error": "Erro ao gerar PDF",
