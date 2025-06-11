@@ -475,49 +475,67 @@
         });
     }
 
-    window.onload = async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = urlParams.get('id');
+   window.onload = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
 
-        if (!studentId) {
-            limparCampos();
-            return;
-        }
+    if (!studentId) return;
 
-        try {
-            const res = await fetch(`/api/alunos/${studentId}`);
-            const aluno = await res.json();
+    try {
+        const res = await fetch(`/editar?id=${studentId}`);
+        const data = await res.json();
+        const aluno = data.aluno;
+        const conteudo = data.conteudo;
 
-            document.getElementById("nome").value = aluno.nome || "";
-            document.getElementById("curso").value = aluno.curso || "";
-            document.getElementById("unidade").value = aluno.unidade || "";
-            document.getElementById("periodo").value = aluno.periodo || "";
-            document.getElementById("data_elaboracao").value = aluno.data_elaboracao || "";
-            document.getElementById("responsavel").value = aluno.responsavel || "";
-            document.getElementById("data_nascimento").value = aluno.data_nascimento || "";
-            document.getElementById("idade").value = aluno.idade || "";
-            document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
-            document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
-            document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
-            document.getElementById("psicologo").value = aluno.psicologo || "";
-            document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
-            document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
-            document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
-            document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
-            document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
-            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString().split('/').reverse().join('-') : "";
-            document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
-            document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
-            document.getElementById("supervisor").value = aluno.supervisor || "";
-            document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
+        // Preenche os campos
+        document.getElementById("nome").value = aluno.nome || "";
+        document.getElementById("curso").value = aluno.curso || "";
+        document.getElementById("unidade").value = aluno.unidade || "";
+        document.getElementById("periodo").value = aluno.periodo || "";
+        document.getElementById("data_elaboracao").value = aluno.data_elaboracao || "";
+        document.getElementById("responsavel").value = aluno.responsavel || "";
+        document.getElementById("data_nascimento").value = aluno.data_nascimento || "";
+        document.getElementById("idade").value = aluno.idade || "";
+        document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
+        document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
+        document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
+        document.getElementById("psicologo").value = aluno.psicologo || "";
+        document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
+        document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
+        document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
+        document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
+        document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
+        document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao || "";
+        document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
+        document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
+        document.getElementById("supervisor").value = aluno.supervisor || "";
+        document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
 
-            editarCampos(false);
-        } catch (err) {
-            console.error("Erro ao carregar aluno:", err);
-            msgEl.style.color = "red";
-            msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
-        }
+        // Conteúdo do PEI
+        if (conteudo.objetivos_gerais) document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais;
+        if (conteudo.adaptaçoes_pedagogicas) document.getElementById("adaptaçoes_pedagogicas").value = conteudo.adaptaçoes_pedagogicas;
+        if (conteudo.intervencoes_complementares) document.getElementById("intervencoes_complementares").value = conteudo.intervencoes_complementares;
+
+        if (conteudo.metas?.curto_prazo?.meta) document.getElementById("meta_curto_prazo").value = conteudo.metas.curto_prazo.meta;
+        if (conteudo.metas?.curto_prazo?.responsavel) document.getElementById("responsavel_curto").value = conteudo.metas.curto_prazo.responsavel;
+        if (conteudo.metas?.curto_prazo?.avaliacao) document.getElementById("avaliacao_curto").value = conteudo.metas.curto_prazo.avaliacao;
+
+        if (conteudo.metas?.medio_prazo?.meta) document.getElementById("meta_medio_prazo").value = conteudo.metas.medio_prazo.meta;
+        if (conteudo.metas?.medio_prazo?.responsavel) document.getElementById("responsavel_medio").value = conteudo.metas.medio_prazo.responsavel;
+        if (conteudo.metas?.medio_prazo?.avaliacao) document.getElementById("avaliacao_medio").value = conteudo.metas.medio_prazo.avaliacao;
+
+        if (conteudo.metas?.longo_prazo?.meta) document.getElementById("meta_longo_prazo").value = conteudo.metas.longo_prazo.meta;
+        if (conteudo.metas?.longo_prazo?.responsavel) document.getElementById("responsavel_longo").value = conteudo.metas.longo_prazo.responsavel;
+        if (conteudo.metas?.longo_prazo?.avaliacao) document.getElementById("avaliacao_longo").value = conteudo.metas.longo_prazo.avaliacao;
+
+        editarCampos(false);  // Bloqueia campos inicialmente
+
+    } catch (err) {
+        console.error("Erro ao carregar aluno:", err);
+        msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
+        msgEl.style.color = "red";
     }
+}
 
     if (form) {
         form.addEventListener('submit', handleSubmit);
