@@ -1,149 +1,218 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Gerenciar Registros - Sistema PEI</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    .form-container {
-      max-width: 800px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-      padding: 30px;
-    }
-    h2 {
-      color: #003D7C;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .listagem {
-      margin-top: 30px;
-    }
-    .registro-card {
-      background: #f9f9f9;
-      border: 1px solid #eee;
-      border-left: 5px solid #F7931E;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 10px;
-      position: relative;
-    }
-    .registro-card strong {
-      color: #003D7C;
-    }
-    .botoes-acoes {
-      margin-top: 20px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .btn-excluir {
-      background-color: #e74c3c;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-excluir:hover {
-      background-color: #c0392b;
-    }
-    .btn-limpar {
-      background-color: #e67e22;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-limpar:hover {
-      background-color: #d35400;
-    }
-    button.btn-voltar {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      background-color: #003D7C;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-bottom: 20px;
-    }
-    button.btn-voltar:hover {
-      background-color: #002a52;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Gerenciar Registros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4; 
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background-color: #ffffff;
+            width: 90%;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: #003D7C;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #F7931E;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions {
+            margin-top: 30px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons button {
+            padding: 10px 16px;
+            background-color: #F7931E;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            min-width: 160px;
+        }
+
+        .action-buttons button:hover {
+            background-color: #e67e22;
+        }
+
+        .btn-excluir {
+            background-color: #e74c3c;
+        }
+
+        .btn-excluir:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-limpar {
+            background-color: #e67e22;
+        }
+
+        .btn-limpar:hover {
+            background-color: #d35400;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
 </head>
 <body>
-  <button class="btn-voltar" onclick="location.href='/dashboard'">⬅ Voltar ao Dashboard</button>
 
-  <div class="form-container">
-    <h2>Registros de Alunos</h2>
-    <div class="botoes-acoes">
-      <button class="btn-limpar" onclick="limparTodos()">Limpar Todos os Registros</button>
+<div class="container">
+    <h1>Gerenciar Registros de Alunos</h1>
+
+    <!-- Tabela de registros -->
+    <table id="tabela-registros">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Curso</th>
+                <th>Data de Nascimento</th>
+                <th>Data da Próxima Avaliação</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="registros-body">
+            <!-- Os registros aparecem aqui -->
+        </tbody>
+    </table>
+
+    <!-- Botões de ação -->
+    <div class="actions">
+        <div class="action-buttons">
+            <button class="btn-limpar" onclick="excluirTodos()">Limpar Todos</button>
+            <button class="btn-voltar" onclick="location.href='/dashboard'">← Voltar</button>
+            <button class="btn-excel" onclick="window.location.href='/api/alunos/csv'">Baixar CSV</button>
+            <button class="btn-excel" onclick="window.location.href='/api/alunos/excel'">Baixar Excel</button>
+        </div>
     </div>
+</div>
 
-    <div id="listagemArea" class="listagem"></div>
-  </div>
+<script>
+    window.onload = async () => {
+        carregarRegistros();
+    };
 
-  <script>
-    // Carrega todos os alunos
     async function carregarRegistros() {
-      const area = document.getElementById("listagemArea");
-      try {
-        const res = await fetch("/api/alunos/all");
-        const alunos = await res.json();
-        area.innerHTML = "";
-        if (!alunos.length) {
-          area.innerHTML = "<p>Nenhum aluno cadastrado.</p>";
-          return;
+        try {
+            const res = await fetch("/api/alunos");
+            const alunos = await res.json();
+
+            const tbody = document.getElementById("registros-body");
+            tbody.innerHTML = "";
+
+            if (!alunos.length) {
+                tbody.innerHTML = "<tr><td colspan='6'>Nenhum registro encontrado.</td></tr>";
+                return;
+            }
+
+            alunos.forEach(aluno => {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                    <td>${aluno.id}</td>
+                    <td>${aluno.nome || "N/A"}</td>
+                    <td>${aluno.curso || "N/A"}</td>
+                    <td>${formatarData(aluno.data_nascimento)}</td>
+                    <td>${formatarData(aluno.proxima_avaliacao)}</td>
+                    <td>
+                        <button class="btn-excluir" onclick="excluirRegistro(${aluno.id})">❌ Excluir</button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+        } catch (err) {
+            console.error("Erro ao carregar registros:", err);
+            document.getElementById("registros-body").innerHTML = "<tr><td colspan='6'>Erro ao carregar registros</td></tr>";
         }
-        alunos.forEach(a => {
-          area.innerHTML += `
-            <div class="registro-card">
-              <strong>ID:</strong> ${a.id}<br>
-              <strong>Nome:</strong> ${a.nome}<br>
-              <strong>Curso:</strong> ${a.curso || 'N/A'}<br>
-              <strong>Unidade:</strong> ${a.unidade || 'N/A'}<br>
-              <strong>Data de Elaboração:</strong> ${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A'}
-              <div style="text-align:right; margin-top: 10px;">
-                <button class="btn-excluir" onclick="excluir(${a.id})">Excluir Registro</button>
-              </div>
-            </div>`;
-        });
-      } catch (err) {
-        console.error("Erro ao carregar registros:", err);
-        document.getElementById("msg").innerText = "❌ Falha ao carregar registros.";
-      }
     }
 
-    // Exclui aluno específico
-    async function excluir(id) {
-      if (!confirm("Tem certeza que deseja excluir esse aluno?")) return;
+    async function excluirRegistro(id) {
+        if (!confirm("Tem certeza que deseja excluir esse aluno?")) return;
 
-      const res = await fetch(`/api/alunos/${id}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      alert(data.message);
-      carregarRegistros();
+        try {
+            const res = await fetch(`/api/alunos/excluir/${id}`, {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+            alert(data.message || "✅ Registro excluído com sucesso.");
+            carregarRegistros(); // Atualiza a tabela
+        } catch (err) {
+            alert("❌ Erro ao excluir registro.");
+            console.error(err);
+        }
     }
 
-    // Exclui todos os alunos
-    async function limparTodos() {
-      if (!confirm("Tem certeza que deseja excluir TODOS os alunos?")) return;
+    async function excluirTodos() {
+        if (!confirm("Tem certeza que deseja excluir TODOS os registros?")) return;
 
-      const res = await fetch("/api/alunos", {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      alert(data.message);
-      carregarRegistros();
+        try {
+            const res = await fetch("/api/alunos/excluir-tudo", {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+            alert(data.message || "✅ Todos os registros foram excluídos.");
+            carregarRegistros(); // Atualiza a tabela
+        } catch (err) {
+            alert("❌ Erro ao excluir todos os registros.");
+            console.error(err);
+        }
     }
 
-    window.onload = carregarRegistros;
-  </script>
+    function formatarData(dataStr) {
+        if (!dataStr) return "N/A";
+        const d = new Date(dataStr.split("T")[0]);
+        return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    }
+</script>
+
 </body>
 </html>
