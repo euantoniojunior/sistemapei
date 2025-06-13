@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
 
+
 class User(db.Model):
     __tablename__ = 'user'
 
@@ -76,7 +77,8 @@ class Student(db.Model):
             'responsavel_legal': self.responsavel_legal,
             'orientador_responsavel': self.orientador_responsavel,
             'supervisor': self.supervisor,
-            'gerente_unidade': self.gerente_unidade
+            'gerente_unidade': self.gerente_unidade,
+            'laudo_medico_arquivo': self.laudo_medico_arquivo
         }
 
     def __repr__(self):
@@ -111,12 +113,14 @@ class PEIHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pei_id = db.Column(db.Integer, db.ForeignKey('pei.id'))
     editado_por = db.Column(db.Integer, db.ForeignKey('user.id'))
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))  # Novo campo
     conteudo_anterior = db.Column(db.Text)  # JSON antes da edição
-    conteudo_novo = db.Column(db.Text)     # JSON após a edição
+    conteudo_novo = db.Column(db.Text)      # JSON após a edição
     data_edicao = db.Column(db.DateTime, default=datetime.utcnow)
 
     pei = db.relationship('PEI', backref='historicos')
     editor = db.relationship('User', backref='edicoes_pei')
+    aluno = db.relationship('Student', backref='historico_pei')
 
     def __repr__(self):
         return f'<PEIHistory PEI={self.pei_id}, Editor={self.editado_por}, Data={self.data_edicao}>'
