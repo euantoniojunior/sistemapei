@@ -43,33 +43,71 @@
       background-color: #f2f2f2;
     }
 
+    .paginacao {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .paginacao button {
+      background-color: #F7931E;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      margin: 0 5px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .paginacao button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #msg {
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #msg.green {
+      color: green;
+    }
+
+    #msg.red {
+      color: red;
+    }
+
     h3 {
       margin-top: 0;
+      color: #003D7C;
     }
 
-    .button-group {
-      display: flex;
-      justify-content: center;
-      margin-top: 30px;
-    }
-
-    .btn-voltar {
-      background-color: #003D7C;
+    .btn-imprimir {
+      background-color: #3498db;
       color: white;
       border: none;
       padding: 10px 16px;
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
+      margin: 0 5px;
     }
 
-    .btn-voltar:hover {
-      background-color: #002a54;
+    .btn-imprimir:hover {
+      background-color: #2980b9;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-
 <div class="form-container">
   <h2>Histórico de Alterações</h2>
 
@@ -93,26 +131,29 @@
     </div>
   </div>
 
-  <div class="button-group">
+  <div class="button-group" id="botoes-iniciais">
     <a href="/dashboard" style="text-decoration: none;">
       <button class="btn-voltar">← Voltar ao Dashboard</button>
     </a>
   </div>
+
+  <p id="msg"></p>
 </div>
 
 <script>
+  let currentPage = 1;
+
   async function buscarAluno() {
     const studentName = document.getElementById('studentName').value.trim();
     const dadosPrincipais = document.getElementById('dadosPrincipais');
     const historicoLateral = document.getElementById('historicoLateral');
 
     if (!studentName) {
-      alert("⚠️ Digite o nome de um aluno.");
+      alert("⚠️ Digite um nome válido.");
       return;
     }
 
     try {
-      // Passo 1: Buscar aluno(s)
       const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
       const alunos = await res.json();
 
@@ -121,41 +162,59 @@
         return;
       }
 
-      const aluno = alunos[0]; // Apenas o primeiro para carregar histórico
+      const aluno = alunos[0];
 
-      // Preenche os dados do aluno
       document.getElementById("nome").textContent = aluno.nome || "N/A";
       document.getElementById("curso").textContent = aluno.curso || "N/A";
       document.getElementById("unidade").textContent = aluno.unidade || "N/A";
-      document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
+      document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaborico).toLocaleDateString() : "N/A";
       document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
 
-      // Passo 2: Carregar histórico do aluno
-      const histRes = await fetch(`/api/pei/historico/${aluno.id}`);
-      const historico = await histRes.json();
+      // Carrega histórico desse aluno
+      currentPage = 1;
+      carregarHistorico(aluno.id);
 
-      if (!histRes.ok || !historico.length) {
-        historicoLateral.innerHTML = '<p>Nenhuma alteração registrada.</p>';
+    } catch (err) {
+      console.error("Erro ao carregar aluno:", err);
+      alert("❌ Erro ao carregar histórico.");
+    }
+  }
+
+  async function carregarHistorico(student_id, page = 1) {
+    try {
+      const res = await fetch(`/api/pei/historico/${student_id}?page=${page}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.dados || !data.dados.length) {
+        document.getElementById("historicoLateral").innerHTML = "<p>Nenhuma alteração registrada.</p>";
         return;
       }
 
-      // Renderiza histórico na lateral
-      historicoLateral.innerHTML = `<h3>Versões Registradas</h3>`;
-      historico.forEach(h => {
+      let html = `<h3>Versões Registradas</h3>`;
+      data.dados.forEach(h => {
         const dataFormatada = new Date(h.data_edicao).toLocaleString();
-        const usuario = h.usuario || "Usuário desconhecido";
-
-        historicoLateral.innerHTML += `
+        html += `
           <div class="card-historico" onclick="abrirPreview(${h.pei_id}, ${h.historico_id})">
             <small>${dataFormatada}</small><br>
             <strong>Versão ID: ${h.historico_id}</strong><br>
-            <em>${usuario}</em>
+            <em>${h.usuario_nome}</em>
           </div>`;
       });
 
+      html += `
+        <div class="paginacao">
+          ${data.paginacao.pagina_anterior ? `<button onclick="carregarHistorico(${student_id}, ${currentPage - 1})">← Página Anterior</button>` : `<button disabled>← Página Anterior</button>`}
+          
+          <button onclick="carregarHistorico(${student_id}, ${currentPage + 1})" ${!data.paginacao.proxima_pagina ? 'disabled' : ''}>
+            Próxima Página →
+          </button>
+        </div>
+      `;
+
+      document.getElementById("historicoLateral").innerHTML = html;
     } catch (err) {
       console.error("Erro ao carregar histórico:", err);
-      alert("❌ Erro ao carregar histórico.");
+      document.getElementById("historicoLateral").innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
     }
   }
 
@@ -163,6 +222,5 @@
     window.open(`/preview_versao?id=${pei_id}&history_id=${history_id}`, '_blank');
   }
 </script>
-
 </body>
 </html>
