@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string, session, send_file
+from flask import Blueprint, request, jsonify, render_template_string, session
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
@@ -6,14 +6,12 @@ import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-import csv
-from io import StringIO
-import openpyxl
+from openpyxl import Workbook
 from io import BytesIO
 
 pei_bp = Blueprint('pei', __name__)
 
-# Configurações
+# Configurações de upload
 UPLOAD_FOLDER = 'static/laudos'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 
@@ -118,41 +116,6 @@ def criar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por ID (para edição)
-@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
-def buscar_aluno_por_id(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
-    aluno_dict = aluno.to_dict()
-
-    conteudo = {}
-    if pei:
-        try:
-            conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
-        except:
-            pass
-
-    aluno_dict.update({
-        'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
-        'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
-        'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
-        'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
-        'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
-        'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
-        'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
-        'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
-        'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
-        'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
-        'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
-        'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
-    })
-
-    return jsonify({'aluno': aluno_dict, 'conteudo': conteudo}), 200
-
-
 # ✅ Nova rota: Busca alunos por nome (usada em search.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def buscar_alunos():
@@ -189,45 +152,73 @@ def buscar_alunos():
     } for a in alunos]), 200
 
 
-# ✅ Nova rota: Listar todos os alunos (para registro.html)
-@pei_bp.route('/api/alunos', methods=['GET'])
-def listar_alunos():
-    alunos = Student.query.all()
-    return jsonify([{
-        'id': a.id,
-        'nome': a.nome,
-        'curso': a.curso,
-        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
-        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else ""
-    } for a in alunos]), 200
-
-
-# ✅ Nova rota: Excluir aluno por ID
-@pei_bp.route('/api/alunos/excluir/<int:id>', methods=['DELETE'])
-def excluir_registro(id):
-    aluno = Student.query.get(id)
+# ✅ Nova rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
+    aluno = Student.query.get(student_id)
     if not aluno:
-        return jsonify({"error": "Aluno não encontrado."}), 404
+        return jsonify({"error": "Aluno não encontrado"}), 404
 
-    try:
-        db.session.delete(aluno)
-        db.session.commit()
-        return jsonify({"message": f"✅ Aluno {id} excluído com sucesso!"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "❌ Erro ao excluir aluno.", "detalhe": str(e)}), 500
+    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
+
+    aluno_dict = aluno.to_dict()
+
+    if pei:
+        try:
+            conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
+            aluno_dict.update({
+                'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
+                'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
+                'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
+                'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
+                'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
+                'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
+                'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
+                'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
+                'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
+                'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
+                'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
+                'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
+            })
+        except Exception as e:
+            print("Erro ao processar conteúdo do PEI:", e)
+
+    return jsonify({'aluno': aluno_dict, 'conteudo': conteudo if pei else {}}), 200
 
 
-# ✅ Nova rota: Excluir todos os alunos
-@pei_bp.route('/api/alunos/excluir-tudo', methods=['DELETE'])
-def excluir_todos_registros():
-    try:
-        Student.query.delete()
-        db.session.commit()
-        return jsonify({"message": "✅ Todos os registros foram excluídos."}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "❌ Erro ao excluir registros.", "detalhe": str(e)}), 500
+# ✅ Nova rota: Buscar histórico de alterações de um aluno
+@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
+def get_historico_pei(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+
+    resultado = []
+    for h in historico:
+        try:
+            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
+        except:
+            conteudo = {}
+
+        usuario_nome = "Desconhecido"
+        if h.editado_por:
+            user = User.query.get(h.editado_por)
+            if user:
+                usuario_nome = user.username
+
+        resultado.append({
+            'historico_id': h.id,
+            'pei_id': h.pei_id,
+            'student_id': h.student_id,
+            'editado_por': h.editado_por,
+            'usuario_nome': usuario_nome,
+            'data_edicao': h.data_edicao.isoformat(),
+            'conteudo': conteudo
+        })
+
+    return jsonify(resultado), 200
 
 
 # ✅ Nova rota: Buscar uma versão específica do PEI
@@ -254,35 +245,7 @@ def get_pei_completo(pei_id):
     }), 200
 
 
-# ✅ Nova rota: Buscar histórico de alterações de um aluno
-@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
-def get_historico_pei(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    historico = PEIHistory.query.filter_by(student_id=student_id).all()
-
-    resultado = []
-    for h in historico:
-        try:
-            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
-        except:
-            conteudo = {}
-
-        resultado.append({
-            'historico_id': h.id,
-            'pei_id': h.pei_id,
-            'student_id': h.student_id,
-            'editado_por': h.editado_por,
-            'data_edicao': h.data_edicao.isoformat(),
-            'conteudo': conteudo
-        })
-
-    return jsonify(resultado), 200
-
-
-# ✅ Nova rota: Buscar versão do histórico
+# ✅ Nova rota: Buscar versão do histórico do PEI
 @pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
 def get_versao_historico(history_id):
     historia = PEIHistory.query.get(history_id)
@@ -292,6 +255,9 @@ def get_versao_historico(history_id):
     try:
         conteudo = json.loads(historia.conteudo_novo) if isinstance(historia.conteudo_novo, str) else historia.conteudo_novo
         aluno = Student.query.get(conteudo.get('student_id', historia.student_id))
+
+        if not aluno:
+            return jsonify({"error": "Aluno não encontrado"}), 404
 
         return jsonify({
             'aluno': aluno.to_dict(),
@@ -333,6 +299,7 @@ def gerar_pdf():
     <p><strong>Nome:</strong> {{ aluno.nome }}</p>
     <p><strong>Curso:</strong> {{ aluno.curso }}</p>
     <p><strong>Objetivos Gerais:</strong> {{ objetivos_gerais }}</p>
+
     <h2>Metas Individuais</h2>
     <table>
         <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
@@ -340,10 +307,20 @@ def gerar_pdf():
         <tr><td>Médio prazo</td><td>{{ meta_medio_prazo }}</td><td>{{ responsavel_medio }}</td><td>{{ avaliacao_medio }}</td></tr>
         <tr><td>Longo prazo</td><td>{{ meta_longo_prazo }}</td><td>{{ responsavel_longo }}</td><td>{{ avaliacao_longo }}</td></tr>
     </table>
+
     <h2>Adaptações Pedagógicas</h2>
     <p>{{ adaptaçoes_pedagogicas }}</p>
+
     <h2>Intervenções Complementares</h2>
     <p>{{ intervencoes_complementares }}</p>
+
+    <h2>Perfil do Aluno</h2>
+    <p>{{ perfil_aluno }}</p>
+
+    <h2>Acompanhamento e Revisão do PEI</h2>
+    <p><strong>Observações gerais:</strong> {{ observacoes_gerais }}</p>
+    <p><strong>Data da próxima avaliação:</strong> {{ proxima_avaliacao }}</p>
+
     <div class="assinatura">
         <div>Responsável Legal<br>__________________________<br>{{ responsavel_legal }}</div>
         <div>Orientador Responsável<br>__________________________<br>{{ orientador_responsavel }}</div>
@@ -374,88 +351,20 @@ def gerar_pdf():
         }), 500
 
 
-# ✅ Nova rota: Baixar todos os registros como CSV
-@pei_bp.route('/api/alunos/csv', methods=['GET'])
-def baixar_csv():
+# ✅ Nova rota: Listar todos os alunos (para registro.html)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def listar_alunos():
     alunos = Student.query.all()
     if not alunos:
         return jsonify({"error": "Nenhum aluno cadastrado"}), 404
 
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow([
-        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
-        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
-        "Transtorno", "Psicólogo", "Psiquiatra", "Psicopedagogo",
-        "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
-        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente"
-    ])
-
-    for aluno in alunos:
-        writer.writerow([
-            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
-            aluno.data_elaboracao or "", aluno.responsavel,
-            aluno.data_nascimento or "", aluno.idade, aluno.diagnostico_cid or "",
-            aluno.transtorno_identificado or "", aluno.psicologo or "",
-            aluno.psiquiatra or "", aluno.psicopedagogo or "",
-            aluno.outros_profissionais or "", aluno.perfil_aluno or "",
-            aluno.observacoes_gerais or "", aluno.proxima_avaliacao or "",
-            aluno.responsavel_legal or "", aluno.orientador_responsavel or "",
-            aluno.supervisor or "", aluno.gerente_unidade or ""
-        ])
-
-    output.seek(0)
-    return output.getvalue(), 200, {
-        "Content-Type": "text/csv",
-        "Content-Disposition": "attachment; filename=alunos.csv"
-    }
-
-
-# ✅ Nova rota: Baixar todos os registros como Excel
-@pei_bp.route('/api/alunos/excel', methods=['GET'])
-def baixar_excel():
-    alunos = Student.query.all()
-    if not alunos:
-        return jsonify({"error": "Nenhum aluno cadastrado"}), 404
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Alunos Cadastrados"
-
-    # Cabeçalho
-    ws.append([
-        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
-        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
-        "Transtorno", "Psicólogo", "Psiquiatra", "Psicopedagogo",
-        "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
-        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente"
-    ])
-
-    # Linhas
-    for aluno in alunos:
-        ws.append([
-            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
-            aluno.data_elaboracao or "", aluno.responsavel,
-            aluno.data_nascimento or "", aluno.idade, aluno.diagnostico_cid or "",
-            aluno.transtorno_identificado or "", aluno.psicologo or "",
-            aluno.psiquiatra or "", aluno.psicopedagogo or "",
-            aluno.outros_profissionais or "", aluno.perfil_aluno or "",
-            aluno.observacoes_gerais or "", aluno.proxima_avaliacao or "",
-            aluno.responsavel_legal or "", aluno.orientador_responsavel or "",
-            aluno.supervisor or "", aluno.gerente_unidade or ""
-        ])
-
-    # Salva na memória
-    excel_file = BytesIO()
-    wb.save(excel_file)
-    excel_file.seek(0)
-
-    return send_file(
-        excel_file,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name='alunos_pei.xlsx'
-    )
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else ""
+    } for a in alunos]), 200
 
 
 # ✅ Nova rota: Excluir aluno por ID
@@ -480,7 +389,117 @@ def excluir_todos_registros():
     try:
         Student.query.delete()
         db.session.commit()
-        return jsonify({"message": "✅ Todos os registros excluídos com sucesso!"})
+        return jsonify({"message": "✅ Todos os registros foram excluídos."}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "❌ Erro ao excluir registros.", "detalhe": str(e)}), 500
+
+
+# ✅ Nova rota: Baixar CSV com todos os alunos
+@pei_bp.route('/api/alunos/csv', methods=['GET'])
+def baixar_csv():
+    alunos = Student.query.all()
+    if not alunos:
+        return jsonify({"error": "Nenhum aluno cadastrado"}), 404
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
+        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
+        "Transtorno", "Laudo Médico", "Psicólogo", "Psiquiatra",
+        "Psicopedagogo", "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
+        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente Unidade"
+    ])
+
+    for aluno in alunos:
+        writer.writerow([
+            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
+            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
+            aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
+            aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
+            aluno.observacoes_gerais,
+            aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
+            aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
+            aluno.gerente_unidade
+        ])
+
+    output.seek(0)
+    return output.getvalue(), 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": "attachment; filename=alunos.csv"
+    }
+
+
+# ✅ Nova rota: Baixar Excel com todos os alunos
+@pei_bp.route('/api/alunos/excel', methods=['GET'])
+def baixar_excel():
+    alunos = Student.query.all()
+    if not alunos:
+        return jsonify({"error": "Nenhum aluno cadastrado"}), 404
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Alunos Cadastrados"
+
+    ws.append([
+        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
+        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
+        "Transtorno", "Laudo Médico", "Psicólogo", "Psiquiatra",
+        "Psicopedagogo", "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
+        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente Unidade"
+    ])
+
+    for aluno in alunos:
+        ws.append([
+            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
+            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
+            aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
+            aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
+            aluno.observacoes_gerais,
+            aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
+            aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
+            aluno.gerente_unidade
+        ])
+
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+
+    return send_file(
+        excel_file,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='alunos_pei.xlsx'
+    )
+
+
+# ✅ Nova rota: Buscar aluno por ID (para edição)
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
+
+    aluno_dict = aluno.to_dict()
+
+    if pei:
+        try:
+            conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
+        except:
+            conteudo = {}
+    else:
+        conteudo = {}
+
+    return jsonify({
+        'aluno': aluno_dict,
+        'conteudo': conteudo
+    }), 200
