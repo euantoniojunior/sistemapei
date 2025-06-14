@@ -7,3 +7,4 @@ pdfkit
 weasyprint
 python-dotenv
 psycopg2-binary
+openpyxl
