@@ -56,37 +56,24 @@
     .actions {
       margin-top: 40px;
       text-align: center;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
     }
 
-    button {
+    .btn-imprimir,
+    .btn-exportar-pdf {
       background-color: #F7931E;
       color: white;
       border: none;
-      padding: 10px 20px;
+      padding: 10px 16px;
       font-size: 14px;
       border-radius: 6px;
       cursor: pointer;
+      margin: 0 10px;
       transition: background-color 0.3s ease;
     }
 
-    button:hover {
-      background-color: #e67e22;
-    }
-
-    .btn-imprimir {
-      background-color: #3498db;
-    }
-
-    .btn-voltar {
-      background-color: #003D7C;
-    }
-
     .btn-imprimir:hover,
-    .btn-voltar:hover {
-      opacity: 0.9;
+    .btn-exportar-pdf:hover {
+      background-color: #e67e22;
     }
 
     @media print {
@@ -103,72 +90,38 @@
   <!-- Dados do Aluno -->
   <p><strong>Nome:</strong> <span id="nome"></span></p>
   <div style="display:flex; gap: 20px;">
-    <p><strong>Curso Técnico:</strong> <span id="curso"></span></p>
+    <p><strong>Curso:</strong> <span id="curso"></span></p>
     <p><strong>Unidade:</strong> <span id="unidade"></span></p>
     <p><strong>Período Letivo:</strong> <span id="periodo"></span></p>
   </div>
-  <div style="display:flex; gap: 20px;">
-    <p><strong>Data de Elaboração:</strong> <span id="data_elaboracao"></span></p>
-    <p><strong>Responsável:</strong> <span id="responsavel"></span></p>
-  </div>
 
-  <h2>1. Identificação do Aluno</h2>
-  <div style="display:flex; gap: 20px;">
-    <p><strong>Data de Nascimento:</strong> <span id="data_nascimento"></span></p>
-    <p><strong>Idade:</strong> <span id="idade"></span> anos</p>
-    <p><strong>Diagnóstico (CID):</strong> <span id="diagnostico_cid"></span></p>
-  </div>
-  <p><strong>Transtorno identificado:</strong> <span id="transtorno_identificado"></span></p>
-  <p><strong>Laudo Médico:</strong> <span id="laudo_medico"></span></p>
-  <p><strong>Psicólogo:</strong> <span id="psicologo"></span></p>
-  <p><strong>Psiquiatra:</strong> <span id="psiquiatra"></span></p>
-  <p><strong>Psicopedagogo:</strong> <span id="psicopedagogo"></span></p>
-  <p><strong>Outros Profissionais:</strong> <span id="outros_profissionais"></span></p>
-
-  <h2>2. Perfil do Aluno</h2>
-  <p id="perfil_aluno"></p>
-
-  <h2>3. Objetivos Gerais do PEI</h2>
-  <p id="objetivos_gerais"></p>
-
-  <h2>4. Adaptações e Estratégias Pedagógicas</h2>
-  <p id="adaptaçoes_pedagogicas"></p>
-
-  <h2>5. Intervenções Complementares</h2>
-  <p id="intervencoes_complementares"></p>
-
-  <h2>6. Metas Individuais</h2>
+  <!-- Metas -->
+  <h2>Metas Individuais</h2>
   <table>
-    <tr>
-      <th>Período</th>
-      <th>Meta</th>
-      <th>Responsável</th>
-      <th>Avaliação</th>
-    </tr>
-    <tr>
-      <td>Curto prazo</td>
-      <td id="meta_curto_prazo">-</td>
-      <td id="responsavel_curto">-</td>
-      <td id="avaliacao_curto">-</td>
-    </tr>
-    <tr>
-      <td>Médio prazo</td>
-      <td id="meta_medio_prazo">-</td>
-      <td id="responsavel_medio">-</td>
-      <td id="avaliacao_medio">-</td>
-    </tr>
-    <tr>
-      <td>Longo prazo</td>
-      <td id="meta_longo_prazo">-</td>
-      <td id="responsavel_longo">-</td>
-      <td id="avaliacao_longo">-</td>
-    </tr>
+    <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
+    <tr><td>Curto prazo</td><td id="meta_curto_prazo"></td><td id="responsavel_curto"></td><td id="avaliacao_curto"></td></tr>
+    <tr><td>Médio prazo</td><td id="meta_medio_prazo"></td><td id="responsavel_medio"></td><td id="avaliacao_medio"></td></tr>
+    <tr><td>Longo prazo</td><td id="meta_longo_prazo"></td><td id="responsavel_longo"></td><td id="avaliacao_longo"></td></tr>
   </table>
 
-  <h2>7. Acompanhamento e Revisão do PEI</h2>
+  <!-- Conteúdo do PEI -->
+  <h2>Objetivos Gerais</h2>
+  <p id="objetivos_gerais"></p>
+
+  <h2>Adaptações Pedagógicas</h2>
+  <p id="adaptaçoes_pedagogicas"></p>
+
+  <h2>Intervenções Complementares</h2>
+  <p id="intervencoes_complementares"></p>
+
+  <h2>Perfil do Aluno</h2>
+  <p id="perfil_aluno"></p>
+
+  <h2>Acompanhamento e Revisão do PEI</h2>
   <p><strong>Observações gerais:</strong> <span id="observacoes_gerais"></span></p>
   <p><strong>Data da próxima avaliação:</strong> <span id="proxima_avaliacao"></span></p>
 
+  <!-- Assinaturas -->
   <div class="assinatura">
     <div>
       Responsável legal<br>
@@ -192,9 +145,10 @@
     </div>
   </div>
 
+  <!-- Botões -->
   <div class="actions">
     <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
-    <button class="btn-voltar" onclick="window.close()">← Fechar</button>
+    <button class="btn-exportar-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
   </div>
 
   <script>
@@ -209,12 +163,15 @@
       }
 
       try {
-        const endpoint = history_id ? `/api/pei/historico/versao/${history_id}` : `/api/pei/versao/${pei_id}`;
+        const endpoint = history_id 
+          ? `/api/pei/historico/versao/${history_id}`
+          : `/api/pei/versao/${pei_id}`;
+
         const res = await fetch(endpoint);
         const data = await res.json();
 
         if (!res.ok || !data.aluno) {
-          throw new Error(data.error || "Erro ao carregar dados");
+          throw new Error(data.error || "Dados inválidos retornados");
         }
 
         const aluno = data.aluno;
@@ -225,9 +182,9 @@
         document.getElementById("curso").textContent = aluno.curso || "N/A";
         document.getElementById("unidade").textContent = aluno.unidade || "N/A";
         document.getElementById("periodo").textContent = aluno.periodo || "N/A";
+
         document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
         document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
-
         document.getElementById("data_nascimento").textContent = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString() : "N/A";
         document.getElementById("idade").textContent = aluno.idade || "N/A";
         document.getElementById("diagnostico_cid").textContent = aluno.diagnostico_cid || "N/A";
@@ -245,7 +202,7 @@
         document.getElementById("supervisor").textContent = aluno.supervisor || "N/A";
         document.getElementById("gerente_unidade").textContent = aluno.gerente_unidade || "N/A";
 
-        // Preenche as metas
+        // Metas
         document.getElementById("meta_curto_prazo").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.meta) || "N/A";
         document.getElementById("responsavel_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.responsavel) || "N/A";
         document.getElementById("avaliacao_curto").textContent = (conteudo.metas && conteudo.metas.curto_prazo && conteudo.metas.curto_prazo.avaliacao) || "N/A";
@@ -268,10 +225,74 @@
       }
     }
 
+    async function exportarPDF() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pei_id = urlParams.get('id');
+      const history_id = urlParams.get('history_id');
+
+      if (!pei_id && !history_id) {
+        alert("⚠️ Selecione uma versão válida antes de exportar.");
+        return;
+      }
+
+      try {
+        const endpoint = history_id ? `/api/pei/historico/versao/${history_id}` : `/api/pei/versao/${pei_id}`;
+        const res = await fetch(endpoint);
+        const data = await res.json();
+
+        if (!res.ok || !data.aluno) {
+          throw new Error("Falha ao carregar dados para exportação");
+        }
+
+        const pdfData = {
+          aluno: data.aluno,
+          ...data.conteudo,
+          meta_curto_prazo: data.conteudo.metas?.curto_prazo?.meta || "N/A",
+          responsavel_curto: data.conteudo.metas?.curto_prazo?.responsavel || "N/A",
+          avaliacao_curto: data.conteudo.metas?.curto_prazo?.avaliacao || "N/A",
+          meta_medio_prazo: data.conteudo.metas?.medio_prazo?.meta || "N/A",
+          responsavel_medio: data.conteudo.metas?.medio_prazo?.responsavel || "N/A",
+          avaliacao_medio: data.conteudo.metas?.medio_prazo?.avaliacao || "N/A",
+          meta_longo_prazo: data.conteudo.metas?.longo_prazo?.meta || "N/A",
+          responsavel_longo: data.conteudo.metas?.longo_prazo?.responsavel || "N/A",
+          avaliacao_longo: data.conteudo.metas?.longo_prazo?.avaliacao || "N/A",
+          objetivos_gerais: data.conteudo.objetivos_gerais || "N/A",
+          perfil_aluno: data.aluno.perfil_aluno || "N/A",
+          intervençoes_complementares: data.conteudo.intervencoes_complementares || "N/A",
+          observacoes_gerais: data.aluno.observacoes_gerais || "N/A",
+          proxima_avaliacao: data.aluno.proxima_avaliacao ? new Date(data.aluno.proxima_avaliacao).toLocaleDateString() : "N/A",
+          responsavel_legal: data.aluno.responsavel_legal || "N/A",
+          orientador_responsavel: data.aluno.orientador_responsavel || "N/A",
+          supervisor: data.aluno.supervisor || "N/A",
+          gerente_unidade: data.aluno.gerente_unidade || "N/A"
+        };
+
+        const resPdf = await fetch("/api/pei/pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pdfData)
+        });
+
+        if (!resPdf.ok) {
+          alert("❌ Falha ao gerar PDF");
+          return;
+        }
+
+        const blob = await resPdf.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `pei_${data.aluno.nome}_${new Date().toISOString().split("T")[0]}.pdf`;
+        link.click();
+
+      } catch (err) {
+        console.error("Erro ao exportar PDF:", err);
+        alert("❌ Erro ao exportar como PDF.");
+      }
+    }
+
     window.onload = () => {
       carregarVersao();
     };
   </script>
-
 </body>
 </html>
