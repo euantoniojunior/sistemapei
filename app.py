@@ -101,6 +101,12 @@ def preview_versao_page():
 @login_required
 def register_page():
     return render_template('register.html')
+            
+
+@app.route('/registros')
+@login_required
+def listar_alunos():
+    return render_template('registros.html')
 
 
 @app.route('/change-password')
@@ -109,10 +115,6 @@ def change_password_page():
     return render_template('change_password.html')
             
 
-@app.route('/registros')
-@login_required
-def register_page():
-    return render_template('registros.html')
 
 @app.route('/logout')
 def logout_page():
