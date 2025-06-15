@@ -105,7 +105,7 @@ def register_page():
 
 @app.route('/registros')
 @login_required
-def listar_alunos():
+def registros_page():
     return render_template('registros.html')
 
 
