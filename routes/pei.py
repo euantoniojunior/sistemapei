@@ -191,7 +191,17 @@ def buscar_alunos():
 # ✅ Nova rota: Listar todos os alunos (para registro.html)
 @pei_bp.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    alunos = Student.query.all()
+    nome = request.args.get('nome')
+
+    if nome:
+        # Busca por nome
+        alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+        if not alunos:
+            return jsonify([])  # Não retorna erro, só lista vazia
+    else:
+        # Lista todos os alunos
+        alunos = Student.query.all()
+
     if not alunos:
         return jsonify({"error": "Nenhum aluno cadastrado."}), 404
 
@@ -199,10 +209,27 @@ def listar_alunos():
         'id': a.id,
         'nome': a.nome,
         'curso': a.curso,
+        'unidade': a.unidade,
+        'periodo': a.periodo,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else None,
+        'responsavel': a.responsavel,
         'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else None,
-        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else None
+        'idade': a.idade,
+        'diagnostico_cid': a.diagnostico_cid,
+        'transtorno_identificado': a.transtorno_identificado,
+        'laudo_medico': a.laudo_medico,
+        'psicologo': a.psicologo,
+        'psiquiatra': a.psiquiatra,
+        'psicopedagogo': a.psicopedagogo,
+        'outros_profissionais': a.outros_profissionais,
+        'perfil_aluno': a.perfil_aluno,
+        'observacoes_gerais': a.observacoes_gerais,
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else None,
+        'responsavel_legal': a.responsavel_legal,
+        'orientador_responsavel': a.orientador_responsavel,
+        'supervisor': a.supervisor,
+        'gerente_unidade': a.gerente_unidade
     } for a in alunos]), 200
-
 
 # ✅ Nova rota: Excluir aluno por ID
 @pei_bp.route('/api/alunos/excluir/<int:id>', methods=['DELETE'])
