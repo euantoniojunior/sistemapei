@@ -3,28 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Gerenciar Registros</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-        }
-
         .container {
-            background-color: #ffffff;
-            width: 90%;
             max-width: 1000px;
-            margin: 50px auto;
-            padding: 20px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 30px;
         }
 
-        h1 {
-            color: #003D7C;
+        h2 {
+            color: #003D7C; 
+            text-align: center;
+            margin-bottom: 20px;
         }
 
         table {
@@ -34,7 +28,7 @@
         }
 
         th, td {
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #ccc;
             text-align: left;
         }
@@ -61,25 +55,41 @@
         button.btn-csv,
         button.btn-excel {
             padding: 10px 16px;
-            background-color: #F7931E;
-            color: white;
+            font-size: 14px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            min-width: 160px;
+        }
+
+        button.btn-excluir {
+            background-color: #e74c3c;
+            color: white;
         }
 
         button.btn-excluir:hover {
             background-color: #c0392b;
         }
 
-        button.btn-limpar:hover {
+        button.btn-limpar {
             background-color: #e67e22;
+            color: white;
+        }
+
+        button.btn-limpar:hover {
+            background-color: #d35400;
+        }
+
+        button.btn-csv,
+        button.btn-excel {
+            background-color: #27ae60;
+            color: white;
         }
 
         button.btn-csv:hover,
         button.btn-excel:hover {
-            background-color: #27ae60;
+            background-color: #1e8449;
         }
 
         @media (max-width: 768px) {
@@ -92,28 +102,27 @@
 </head>
 <body>
 
-<div class="container">
-    <h1>Registros de Alunos</h1>
+<div class="form-container">
+    <h2>Registros de Alunos</h2>
 
-    <!-- Tabela de alunos -->
-    <table id="tabela-registros">
+    <table>
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Nome</th>
                 <th>Curso</th>
-                <th>Data de Nascimento</th>
+                <th>Unidade</th>
+                <th>Data de Elaboração</th>
                 <th>Próxima Avaliação</th>
-                <th>Ações</th>
+                <th>Ação</th>
             </tr>
         </thead>
         <tbody id="registros-body">
-            <tr><td colspan="6">Carregando registros...</td></tr>
+            <tr><td colspan="7">Carregando alunos...</td></tr>
         </tbody>
     </table>
 
-    <!-- Botões de ação -->
-    <div class="actions">
+    <div class="button-group actions">
         <button class="btn-excluir" onclick="excluirTodos()">🗑️ Limpar Todos</button>
         <button class="btn-csv" onclick="window.location.href='/api/alunos/csv'">📄 Baixar CSV</button>
         <button class="btn-excel" onclick="window.location.href='/api/alunos/excel'">📊 Baixar Excel</button>
@@ -121,81 +130,77 @@
 </div>
 
 <script>
-    window.onload = () => {
-        carregarRegistros();
-    };
+    window.onload = () => carregarRegistros();
 
     async function carregarRegistros() {
         try {
             const res = await fetch("/api/alunos");
-            if (!res.ok) {
-                throw new Error("Erro na resposta da API");
-            }
-
             const alunos = await res.json();
 
             const tbody = document.getElementById("registros-body");
-            tbody.innerHTML = ""; // Limpa antes de adicionar
+            tbody.innerHTML = "";
 
-            if (!alunos.length) {
-                tbody.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
+            if (!Array.isArray(alunos) || !alunos.length) {
+                tbody.innerHTML = "<tr><td colspan='7'>Nenhum aluno cadastrado.</td></tr>";
                 return;
             }
 
             alunos.forEach(aluno => {
-                const tr = document.createElement("tr");
+                const dataElaboracao = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
+                const proximaAvaliacao = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
 
+                const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${aluno.id || "N/A"}</td>
-                    <td>${aluno.nome || "N/A"}</td>
-                    <td>${aluno.curso || "N/A"}</td>
-                    <td>${formatarData(aluno.data_nascimento)}</td>
-                    <td>${formatarData(aluno.proxima_avaliacao)}</td>
+                    <td>${aluno.id}</td>
+                    <td>${aluno.nome}</td>
+                    <td>${aluno.curso}</td>
+                    <td>${aluno.unidade}</td>
+                    <td>${dataElaboracao}</td>
+                    <td>${proximaAvaliacao}</td>
                     <td>
                         <button class="btn-excluir" onclick="excluirRegistro(${aluno.id})">❌ Excluir</button>
                     </td>
                 `;
-
                 tbody.appendChild(tr);
             });
 
         } catch (err) {
             console.error("Erro ao carregar registros:", err);
-            document.getElementById("registros-body").innerHTML = `<tr><td colspan="6">❌ Erro ao carregar registros: ${err.message}</td></tr>`;
+            document.getElementById("msg").innerText = "❌ Erro ao carregar dados dos alunos.";
         }
     }
 
     async function excluirRegistro(id) {
         if (!confirm("Tem certeza que deseja excluir este aluno?")) return;
 
-        const res = await fetch(`/api/alunos/excluir/${id}`, {
-            method: "DELETE"
-        });
+        try {
+            const res = await fetch(`/api/alunos/excluir/${id}`, {
+                method: "DELETE"
+            });
 
-        const data = await res.json();
-        alert(data.message || data.error || "✅ Registro excluído!");
-        carregarRegistros(); // Atualiza a tabela
+            const data = await res.json();
+            alert(data.message || "✅ Registro excluído!");
+            carregarRegistros(); // Atualiza a tabela
+        } catch (err) {
+            alert("❌ Erro ao excluir registro.");
+            console.error(err);
+        }
     }
 
     async function excluirTodosRegistros() {
         if (!confirm("Tem certeza que deseja excluir TODOS os alunos?")) return;
 
-        const res = await fetch("/api/alunos/excluir-tudo", {
-            method: "DELETE"
-        });
-
-        const data = await res.json();
-        alert(data.message || data.error || "✅ Todos os registros foram excluídos.");
-        carregarRegistros(); // Atualiza a tabela
-    }
-
-    function formatarData(dataStr) {
-        if (!dataStr || dataStr === "N/A") return "N/A";
         try {
-            const d = new Date(dataStr.split("T")[0]);
-            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-        } catch {
-            return "Inválida";
+            const res = await fetch("/api/alunos/excluir-tudo", {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+            alert(data.message || "✅ Todos os alunos foram excluídos.");
+            carregarRegistros(); // Atualiza a tabela
+        } catch (err) {
+            alert("❌ Erro ao excluir todos.");
+            console.error(err);
         }
     }
 </script>
