@@ -13,11 +13,9 @@ class User(db.Model):
     role = db.Column(db.String(50), default='usuario')  # admin, mediador, usuario
 
     def set_password(self, password):
-        """Define a senha com hash seguro"""
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
-        """Verifica se a senha informada está correta"""
         return check_password_hash(self.password, password)
 
     def __repr__(self):
@@ -53,7 +51,6 @@ class Student(db.Model):
     gerente_unidade = db.Column(db.String(150))
 
     def to_dict(self):
-        """Retorna os dados do aluno como dicionário"""
         return {
             'id': self.id,
             'nome': self.nome,
@@ -77,8 +74,7 @@ class Student(db.Model):
             'responsavel_legal': self.responsavel_legal,
             'orientador_responsavel': self.orientador_responsavel,
             'supervisor': self.supervisor,
-            'gerente_unidade': self.gerente_unidade,
-            'laudo_medico_arquivo': self.laudo_medico_arquivo
+            'gerente_unidade': self.gerente_unidade
         }
 
     def __repr__(self):
@@ -96,9 +92,8 @@ class PEI(db.Model):
     aluno = db.relationship('Student', backref='peis')
 
     def get_conteudo(self):
-        """Retorna o conteúdo do PEI como dicionário JSON"""
         try:
-            return json.loads(self.conteudo)
+            return json.loads(self.conteudo) if isinstance(self.conteudo, str) else self.conteudo
         except Exception as e:
             print(f"[ERRO] Falha ao carregar conteúdo do PEI ID {self.id}: {e}")
             return {}
@@ -113,7 +108,7 @@ class PEIHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pei_id = db.Column(db.Integer, db.ForeignKey('pei.id'))
     editado_por = db.Column(db.Integer, db.ForeignKey('user.id'))
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))  # Novo campo
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
     conteudo_anterior = db.Column(db.Text)  # JSON antes da edição
     conteudo_novo = db.Column(db.Text)      # JSON após a edição
     data_edicao = db.Column(db.DateTime, default=datetime.utcnow)
