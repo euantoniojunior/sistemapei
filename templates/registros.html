@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: #f4f4f4; 
+            background-color: #f4f4f4;    
             text-align: center;
             margin: 0;
             padding: 0;
@@ -25,6 +25,7 @@
 
         h1 {
             color: #003D7C;
+            margin-bottom: 20px;
         }
 
         table {
@@ -89,12 +90,22 @@
                 align-items: stretch;
             }
         }
+
+        #msg {
+            margin-top: 20px;
+            font-size: 14px;
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Registros de Alunos</h1>
+
+    <!-- Mensagem -->
+    <p id="msg"></p>
 
     <!-- Tabela -->
     <table id="tabela-registros">
@@ -115,7 +126,7 @@
 
     <!-- Botões de ação -->
     <div class="actions">
-        <button class="btn-excluir" onclick="excluirTodos()">🗑️ Limpar Todos</button>
+        <button class="btn-limpar" onclick="excluirTodos()">🗑️ Limpar Todos</button>
         <button class="btn-csv" onclick="window.location.href='/api/alunos/csv'">📄 Baixar CSV</button>
         <button class="btn-excel" onclick="window.location.href='/api/alunos/excel'">📊 Baixar Excel</button>
     </div>
@@ -125,8 +136,12 @@
     window.onload = () => carregarRegistros();
 
     async function carregarRegistros() {
+        const msgEl = document.getElementById("msg");
+        const tbody = document.getElementById("registros-body");
+
         try {
-            const res = await fetch("/api/alunos");
+            // Nova rota com todos os alunos (sem ?nome=)
+            const res = await fetch("/api/alunos/listar");  // Garante que estamos usando a rota certa
             if (!res.ok) throw new Error("Erro na resposta do servidor");
 
             let alunos = await res.json();
@@ -136,8 +151,7 @@
                 alunos = [];
             }
 
-            const tbody = document.getElementById("registros-body");
-            tbody.innerHTML = "";
+            tbody.innerHTML = ""; // Limpa antes de adicionar novos
 
             if (!alunos.length) {
                 tbody.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
@@ -162,34 +176,64 @@
                 tbody.appendChild(tr);
             });
 
+            msgEl.innerText = "";
+
         } catch (err) {
             console.error("Erro ao carregar registros:", err);
-            document.getElementById("msg").innerText = "❌ Erro ao carregar registros.";
+            msgEl.innerText = "❌ Erro ao carregar registros.";
         }
     }
 
     async function excluirRegistro(id) {
         if (!confirm("Tem certeza que deseja excluir esse aluno?")) return;
 
-        const res = await fetch(`/api/alunos/excluir/${id}`, {
-            method: "DELETE"
-        });
+        const msgEl = document.getElementById("msg");
 
-        const data = await res.json();
-        alert(data.message || data.error || "✅ Registro excluído!");
-        carregarRegistros(); // Atualiza a tabela
+        try {
+            const res = await fetch(`/api/alunos/excluir/${id}`, {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                msgEl.style.color = "green";
+                msgEl.innerText = data.message || "✅ Registro excluído!";
+            } else {
+                throw new Error(data.error || "Falha ao excluir aluno.");
+            }
+
+            carregarRegistros(); // Atualiza a tabela
+
+        } catch (err) {
+            msgEl.style.color = "red";
+            msgEl.innerText = "❌ Erro ao excluir registro: " + err.message;
+        }
     }
 
-    async function excluirTodosRegistros() {
+    async function excluirTodos() {
         if (!confirm("Tem certeza que deseja excluir TODOS os alunos?")) return;
 
-        const res = await fetch("/api/alunos/excluir-tudo", {
-            method: "DELETE"
-        });
+        const msgEl = document.getElementById("msg");
 
-        const data = await res.json();
-        alert(data.message || data.error || "✅ Todos os registros excluídos.");
-        carregarRegistros(); // Atualiza a tabela
+        try {
+            const res = await fetch("/api/alunos/excluir-tudo", {
+                method: "DELETE"
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                msgEl.style.color = "green";
+                msgEl.innerText = "✅ Todos os registros foram excluídos.";
+            } else {
+                throw new Error(data.error || "Falha ao limpar todos.");
+            }
+
+            carregarRegistros(); // Atualiza a tabela
+
+        } catch (err) {
+            msgEl.style.color = "red";
+            msgEl.innerText = "❌ Erro ao excluir todos: " + err.message;
+        }
     }
 
     function formatarData(dataStr) {
@@ -197,7 +241,7 @@
         try {
             const d = new Date(dataStr.split("T")[0]);
             return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-        } catch (e) {
+        } catch {
             return "Inválida";
         }
     }
