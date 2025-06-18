@@ -1,12 +1,14 @@
 from flask import Flask, render_template, session, redirect, url_for
 from flask_cors import CORS
-from database.connection import db  # ✅ Importa o 'db' antes de usá-lo
-from models.models import Student, User  # Você pode adicionar outras modelos conforme necessário
+from database.connection import db  # Importa o 'db' antes de usá-lo
+from models.models import Student, User, PEI, PEIHistory
 from routes.auth import auth_bp
 from routes.pei import pei_bp
 import os
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import inspect
+
 
 # ========== CONFIGURAÇÃO DA APLICAÇÃO ==========
 app = Flask(__name__,
@@ -30,11 +32,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa banco
-db.init_app(app)  # ✅ Agora 'db' está definido e funciona
+db.init_app(app)  # Agora 'db' está definido e funciona corretamente
 
 # Registra os Blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(pei_bp)
+
 
 # ========== DECORADOR DE AUTENTICAÇÃO ==========
 def login_required(f):
@@ -94,26 +97,25 @@ def preview_page():
 @app.route('/preview_versao')
 @login_required
 def preview_versao_page():
-    return render_template('preview_versao.html')  # Certifique-se que esse arquivo existe em templates/
+    return render_template('preview_versao.html')
 
 
 @app.route('/register')
 @login_required
 def register_page():
     return render_template('register.html')
-            
+
 
 @app.route('/registros')
 @login_required
 def registros_page():
-    return render_template('registros.html')
+    return render_template('registro.html')
 
 
 @app.route('/change-password')
 @login_required
 def change_password_page():
     return render_template('change_password.html')
-            
 
 
 @app.route('/logout')
@@ -122,8 +124,50 @@ def logout_page():
     return redirect(url_for('login_page'))
 
 
-# ========== FUNÇÃO DE CRIAÇÃO DE USUÁRIOS PADRÃO ==========
+# ========== FUNÇÕES AUXILIARES PARA INICIALIZAÇÃO ==========
+def verificar_e_criar_colunas(engine):
+    """Verifica se todas as colunas necessárias existem e cria-as se necessário"""
+    inspector = inspect(engine)
+
+    if 'student' not in inspector.get_table_names():
+        print("⚠️ Tabela 'student' não existe. Crie-a primeiro.")
+        return
+
+    columns = [col['name'] for col in inspector.get_columns('student')]
+
+    colunas_necessarias = {
+        'laudo_medico_arquivo': 'VARCHAR(255)',
+        'responsavel_legal': 'VARCHAR(150)',
+        'orientador_responsavel': 'VARCHAR(150)',
+        'supervisor': 'VARCHAR(150)',
+        'gerente_unidade': 'VARCHAR(150)'
+    }
+
+    missing_cols = [f"ADD COLUMN {col} {ctype}" for col, ctype in colunas_necessarias.items() if col not in columns]
+
+    if missing_cols:
+        with engine.connect() as conn:
+            for cmd in missing_cols:
+                try:
+                    conn.execute(f"ALTER TABLE student {cmd};")
+                    print(f"[INFO] Coluna '{cmd}' criada na tabela 'student'")
+                except Exception as e:
+                    print(f"[ERRO] Falha ao criar coluna '{cmd}': {e}")
+            conn.commit()
+
+
+def criar_tabelas_se_necessario():
+    """Garante que todas as tabelas sejam criadas"""
+    with app.app_context():
+        engine = db.engine
+        db.create_all()
+
+        # Verifica e cria colunas faltando
+        verificar_e_criar_colunas(engine)
+
+
 def criar_usuarios_padrao():
+    """Cria usuários iniciais se não existirem"""
     with app.app_context():
         try:
             admin = User.query.filter_by(username='admin').first()
@@ -131,12 +175,12 @@ def criar_usuarios_padrao():
 
             if not admin:
                 hashed_pw = generate_password_hash('123456')
-                admin = User(username='admin', password=hashed_pw)
+                admin = User(username='admin', password=hashed_pw, role='admin')
                 db.session.add(admin)
 
             if not mediador:
                 hashed_pw = generate_password_hash('123456')
-                mediador = User(username='mediador', password=hashed_pw)
+                mediador = User(username='mediador', password=hashed_pw, role='mediador')
                 db.session.add(mediador)
 
             db.session.commit()
@@ -151,16 +195,14 @@ def criar_usuarios_padrao():
 
 # ========== INICIALIZAÇÃO DO BANCO E USUÁRIOS ==========
 @app.before_request
-def inicializar_usuarios_uma_vez():
-    if not getattr(app, 'usuarios_inicializados', False):
+def inicializar_aplicacao():
+    if not getattr(app, 'inicializado', False):
+        criar_tabelas_se_necessario()
         criar_usuarios_padrao()
-        app.usuarios_inicializados = True
+        app.inicializado = True
 
 
 # ========== RODAR LOCALMENTE (opcional) ==========
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        criar_usuarios_padrao()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
