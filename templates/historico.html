@@ -1,226 +1,138 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Histórico - Evolução do Cadastro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    .container-historico {
-      display: flex;
-      gap: 30px;
-      padding: 40px;
-      max-width: 1200px;
-      margin: auto;
-    }
+    <meta charset="UTF-8">
+    <title>Histórico do PEI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4; 
+            margin: 0;
+            padding: 0;
+        }
 
-    .dados-principais {
-      flex: 1;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 30px;
-    }
+        .form-container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
 
-    .historico-lateral {
-      flex: 1;
-      background: #f9f9f9;    
-      border-radius: 12px;
-      padding: 20px;
-    }
+        h2 {
+            color: #003D7C;
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-    .card-historico {
-      background: #fef8ec;
-      border-left: 5px solid #F7931E;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
 
-    .card-historico:hover {
-      background-color: #f2f2f2;
-    }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
 
-    .paginacao {
-      margin-top: 20px;
-      text-align: center;
-    }
+        th {
+            background-color: #F7931E;
+            color: white;
+        }
 
-    .paginacao button {
-      background-color: #F7931E;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      margin: 0 5px;
-      font-size: 14px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
 
-    .paginacao button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
+        .btn-ver {
+            background-color: #003D7C;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
-    #msg {
-      margin-top: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    #msg.green {
-      color: green;
-    }
-
-    #msg.red {
-      color: red;
-    }
-
-    h3 {
-      margin-top: 0;
-      color: #003D7C;
-    }
-
-    .btn-imprimir {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      font-size: 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin: 0 5px;
-    }
-
-    .btn-imprimir:hover {
-      background-color: #2980b9;
-    }
-
-    .button-group {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-top: 20px;
-    }
-  </style>
+        .btn-ver:hover {
+            background-color: #002a54;
+        }
+    </style>
 </head>
 <body>
+
 <div class="form-container">
-  <h2>Histórico de Alterações</h2>
-
-  <input type="text" id="studentName" placeholder="Digite o nome do aluno">
-  <button onclick="buscarAluno()" style="margin-top:10px;">Buscar</button>
-
-  <div class="container-historico" style="margin-top: 30px;">
-    <!-- Dados Principais -->
-    <div class="dados-principais" id="dadosPrincipais">
-      <p><strong>Nome:</strong> <span id="nome">N/A</span></p>
-      <p><strong>Curso:</strong> <span id="curso">N/A</span></p>
-      <p><strong>Unidade:</strong> <span id="unidade">N/A</span></p>
-      <p><strong>Data de Elaboração:</strong> <span id="data_elaboracao">N/A</span></p>
-      <p><strong>Responsável:</strong> <span id="responsavel">N/A</span></p>
-    </div>
-
-    <!-- Histórico Lateral -->
-    <div class="historico-lateral" id="historicoLateral">
-      <h3>Evoluções Registradas</h3>
-      <p>Nenhum aluno selecionado ainda.</p>
-    </div>
-  </div>
-
-  <div class="button-group" id="botoes-iniciais">
-    <a href="/dashboard" style="text-decoration: none;">
-      <button class="btn-voltar">← Voltar ao Dashboard</button>
-    </a>
-  </div>
-
-  <p id="msg"></p>
+    <h2>Histórico de Alterações do PEI</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID da Edição</th>
+                <th>Data da Edição</th>
+                <th>Editado Por</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="historico-body">
+            <tr><td colspan="4">Carregando histórico...</td></tr>
+        </tbody>
+    </table>
 </div>
 
 <script>
-  let currentPage = 1;
+    window.onload = () => carregarHistorico();
 
-  async function buscarAluno() {
-    const studentName = document.getElementById('studentName').value.trim();
-    const dadosPrincipais = document.getElementById('dadosPrincipais');
-    const historicoLateral = document.getElementById('historicoLateral');
+    async function carregarHistorico() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
+        const historicoBody = document.getElementById("historico-body");
+        historicoBody.innerHTML = "<tr><td colspan='4'>Carregando histórico...</td></tr>";
 
-    if (!studentName) {
-      alert("⚠️ Digite um nome válido.");
-      return;
+        if (!studentId) {
+            historicoBody.innerHTML = "<tr><td colspan='4'>⚠️ ID do aluno ausente.</td></tr>";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/pei/historico/${studentId}`);
+            const historico = await res.json();
+
+            if (!Array.isArray(historico) || !historico.length) {
+                historicoBody.innerHTML = "<tr><td colspan='4'>Nenhuma alteração registrada.</td></tr>";
+                return;
+            }
+
+            historicoBody.innerHTML = "";
+
+            historico.forEach(h => {
+                const d = new Date(h.data_edicao);
+                const dataFormatada = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()} às ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}hs`;
+
+                historicoBody.innerHTML += `
+                    <tr>
+                        <td>${h.historico_id}</td>
+                        <td>${dataFormatada}</td>
+                        <td>${h.usuario}</td>
+                        <td>
+                            <button class="btn-ver" onclick="abrirVersao(${h.historico_id})">🔍 Ver Versão</button>
+                        </td>
+                    </tr>`;
+            });
+
+        } catch (err) {
+            historicoBody.innerHTML = "<tr><td colspan='4'>❌ Erro ao carregar histórico.</td></tr>";
+            console.error("Erro no histórico:", err);
+        }
     }
 
-    try {
-      const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
-      const alunos = await res.json();
-
-      if (!alunos.length) {
-        alert("❌ Nenhum aluno encontrado.");
-        return;
-      }
-
-      const aluno = alunos[0];
-
-      document.getElementById("nome").textContent = aluno.nome || "N/A";
-      document.getElementById("curso").textContent = aluno.curso || "N/A";
-      document.getElementById("unidade").textContent = aluno.unidade || "N/A";
-      document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaborico).toLocaleDateString() : "N/A";
-      document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
-
-      // Carrega histórico desse aluno
-      currentPage = 1;
-      carregarHistorico(aluno.id);
-
-    } catch (err) {
-      console.error("Erro ao carregar aluno:", err);
-      alert("❌ Erro ao carregar histórico.");
+    function abrirVersao(history_id) {
+        window.location.href = `/preview_versao?history_id=${history_id}`;
     }
-  }
-
-  async function carregarHistorico(student_id, page = 1) {
-    try {
-      const res = await fetch(`/api/pei/historico/${student_id}?page=${page}`);
-      const data = await res.json();
-
-      if (!res.ok || !data.dados || !data.dados.length) {
-        document.getElementById("historicoLateral").innerHTML = "<p>Nenhuma alteração registrada.</p>";
-        return;
-      }
-
-      let html = `<h3>Versões Registradas</h3>`;
-      data.dados.forEach(h => {
-        const dataFormatada = new Date(h.data_edicao).toLocaleString();
-        html += `
-          <div class="card-historico" onclick="abrirPreview(${h.pei_id}, ${h.historico_id})">
-            <small>${dataFormatada}</small><br>
-            <strong>Versão ID: ${h.historico_id}</strong><br>
-            <em>${h.usuario_nome}</em>
-          </div>`;
-      });
-
-      html += `
-        <div class="paginacao">
-          ${data.paginacao.pagina_anterior ? `<button onclick="carregarHistorico(${student_id}, ${currentPage - 1})">← Página Anterior</button>` : `<button disabled>← Página Anterior</button>`}
-          
-          <button onclick="carregarHistorico(${student_id}, ${currentPage + 1})" ${!data.paginacao.proxima_pagina ? 'disabled' : ''}>
-            Próxima Página →
-          </button>
-        </div>
-      `;
-
-      document.getElementById("historicoLateral").innerHTML = html;
-    } catch (err) {
-      console.error("Erro ao carregar histórico:", err);
-      document.getElementById("historicoLateral").innerHTML = "<p>❌ Erro ao carregar histórico.</p>";
-    }
-  }
-
-  function abrirPreview(pei_id, history_id) {
-    window.open(`/preview_versao?id=${pei_id}&history_id=${history_id}`, '_blank');
-  }
 </script>
+
 </body>
 </html>
