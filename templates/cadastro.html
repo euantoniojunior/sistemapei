@@ -1,498 +1,450 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastro de Aluno - PEI</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f4f7fa; 
-            margin: 0;
-            padding: 0;
-        }
+from flask import Blueprint, request, jsonify, render_template_string, send_file
+from models.models import Student, PEI, PEIHistory
+from database.connection import db
+import pdfkit
+import json
+from datetime import datetime
+from werkzeug.utils import secure_filename
+import os
+import csv
+from io import StringIO
+import openpyxl
+from io import BytesIO
 
-        .form-container {
-            max-width: 900px;
-            margin: 40px auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            padding: 30px;
-        }
+pei_bp = Blueprint('pei', __name__)
 
-        h2 {
-            color: #003D7C;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+# Pasta de uploads
+UPLOAD_FOLDER = 'static/laudos'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 15px;
-            resize: vertical;
-        }
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-        .grid-2,
-        .grid-3 {
-            display: grid;
-            gap: 15px;
-            margin-top: 20px;
-        }
 
-        .grid-2 {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        }
+def parse_date(date_str):
+    """Converte string de data para objeto date"""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None
 
-        .grid-3 {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        }
 
-        .button-group {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
+# ✅ Rota principal: Salvar ou editar um PEI
+@pei_bp.route('/api/pei', methods=['POST'])
+def criar_pei():
+    try:
+        if request.is_json:
+            data = request.get_json()
+            aluno_data = data.get('aluno')
+            conteudo_data = data.get('conteudo')
+        else:
+            aluno_json = request.form.get('aluno')
+            conteudo_json = request.form.get('conteudo')
 
-        button.btn-salvar,
-        button.btn-editar,
-        button.btn-finalizar {
-            background-color: #F7931E;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            font-size: 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+            if not aluno_json or not conteudo_json:
+                return jsonify({"error": "Dados ausentes no formulário"}), 400
 
-        button.btn-salvar:hover,
-        button.btn-editar:hover,
-        button.btn-finalizar:hover {
-            background-color: #e67e22;
-        }
+            aluno_data = json.loads(aluno_json)
+            conteudo_data = json.loads(conteudo_json)
 
-        button.btn-editar {
-            background-color: #2c3e50;
-        }
+        student_id = aluno_data.get('student_id')
 
-        button.btn-finalizar {
-            background-color: #003D7C;
-        }
+        # Se for edição
+        if student_id and str(student_id).isdigit():
+            aluno = Student.query.get(int(student_id))
+            if not aluno:
+                return jsonify({"error": "Aluno não encontrado"}), 404
+        else:
+            aluno = Student(
+                nome=aluno_data.get('nome'),
+                curso=aluno_data.get('curso'),
+                unidade=aluno_data.get('unidade'),
+                periodo=aluno_data.get('periodo'),
+                data_elaboracao=parse_date(aluno_data.get('data_elaboracao')),
+                responsavel=aluno_data.get('responsavel'),
+                data_nascimento=parse_date(aluno_data.get('data_nascimento')),
+                idade=aluno_data.get('idade'),
+                diagnostico_cid=aluno_data.get('diagnostico_cid'),
+                transtorno_identificado=aluno_data.get('transtorno_identificado'),
+                laudo_medico=aluno_data.get('laudo_medico'),
+                psicologo=aluno_data.get('psicologo'),
+                psiquiatra=aluno_data.get('psiquiatra'),
+                psicopedagogo=aluno_data.get('psicopedagogo'),
+                outros_profissionais=aluno_data.get('outros_profissionais'),
+                perfil_aluno=aluno_data.get('perfil_aluno'),
+                observacoes_gerais=aluno_data.get('observacoes_gerais'),
+                proxima_avaliacao=parse_date(aluno_data.get('proxima_avaliacao')),
+                responsavel_legal=aluno_data.get('responsavel_legal'),
+                orientador_responsavel=aluno_data.get('orientador_responsavel'),
+                supervisor=aluno_data.get('supervisor'),
+                gerente_unidade=aluno_data.get('gerente_unidade')
+            )
+            db.session.add(aluno)
+            db.session.flush()
 
-        #msg {
-            margin-top: 10px;
-            font-size: 14px;
-            text-align: center;
-            font-weight: bold;
-        }
+        # Upload opcional de arquivo
+        if 'laudo_medico_arquivo' in request.files:
+            file = request.files['laudo_medico_arquivo']
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                aluno.laudo_medico_arquivo = filename
 
-        #msg.red {
-            color: red;
-        }
+        # Conteúdo do PEI
+        pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
+        db.session.add(pei)
 
-        #msg.green {
-            color: green;
-        }
-    </style>
-</head>
-<body>
+        # Registra histórico da edição
+        historico = PEIHistory(
+            pei_id=pei.id,
+            editado_por=session.get('user_id') or 1,
+            student_id=aluno.id,
+            conteudo_anterior="{}",
+            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False),
+            data_edicao=datetime.now()
+        )
+        db.session.add(historico)
 
-<div class="form-container">
-    <h2>Cadastro de Plano Educacional Individualizado (PEI)</h2>
+        db.session.commit()
 
-    <!-- Campo oculto para ID -->
-    <input type="hidden" id="student_id" name="student_id">
+        return jsonify({
+            "message": "✅ Cadastro salvo com sucesso!",
+            "student_id": aluno.id,
+            "tipo": "edição" if student_id else "novo"
+        }), 201
 
-    <!-- Dados Pessoais (Somente Leitura) -->
-    <label for="nome">Nome do Aluno:</label>
-    <input type="text" name="nome" id="nome" required readonly>
+    except Exception as e:
+        db.session.rollback()
+        print("❌ Erro interno:", str(e))
+        return jsonify({
+            "error": "Erro ao salvar o PEI",
+            "detalhe": str(e)
+        }), 500
 
-    <div class="grid-2">
-        <div>
-            <label for="curso">Curso:</label>
-            <input type="text" name="curso" id="curso" required readonly>
-        </div>
-        <div>
-            <label for="unidade">Unidade:</label>
-            <input type="text" name="unidade" id="unidade" required readonly>
-        </div>
+
+# ✅ Nova rota: Buscar aluno por ID (para cadastro/editar)
+@pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
+def buscar_aluno_por_id(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    pei = PEI.query.filter_by(student_id=aluno.id).order_by(PEI.data_registro.desc()).first()
+    aluno_dict = aluno.to_dict()
+    conteudo = {}
+
+    if pei:
+        try:
+            conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
+        except Exception as e:
+            print(f"[ERRO] Falha ao carregar conteúdo do PEI {pei.id}: {e}")
+
+    aluno_dict.update({
+        'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
+        'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
+        'avaliacao_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('avaliacao', ''),
+
+        'meta_medio_prazo': conteudo.get('metas', {}).get('medio_prazo', {}).get('meta', ''),
+        'responsavel_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('responsavel', ''),
+        'avaliacao_medio': conteudo.get('metas', {}).get('medio_prazo', {}).get('avaliacao', ''),
+
+        'meta_longo_prazo': conteudo.get('metas', {}).get('longo_prazo', {}).get('meta', ''),
+        'responsavel_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('responsavel', ''),
+        'avaliacao_longo': conteudo.get('metas', {}).get('longo_prazo', {}).get('avaliacao', ''),
+
+        'objetivos_gerais': conteudo.get('objetivos_gerais', ''),
+        'adaptaçoes_pedagogicas': conteudo.get('adaptaçoes_pedagogicas', ''),
+        'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
+    })
+
+    return jsonify({'aluno': aluno_dict, 'conteudo': conteudo}), 200
+
+
+# ✅ Nova rota: Buscar todos os alunos (usada em registro.html)
+@pei_bp.route('/api/alunos/listar', methods=['GET'])
+def listar_todos_alunos():
+    alunos = Student.query.all()
+    if not alunos:
+        return jsonify([]), 200
+
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else ""
+    } for a in alunos]), 200
+
+
+# ✅ Nova rota: Buscar aluno por nome (usada em search.html)
+@pei_bp.route('/api/alunos', methods=['GET'])
+def buscar_alunos():
+    nome = request.args.get('nome')
+    if not nome:
+        return jsonify([]), 200
+
+    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'unidade': a.unidade,
+        'periodo': a.periodo,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else "",
+        'responsavel': a.responsavel,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
+        'idade': a.idade,
+        'diagnostico_cid': a.diagnostico_cid,
+        'transtorno_identificado': a.transtorno_identificado,
+        'laudo_medico': a.laudo_medico,
+        'psicologo': a.psicologo,
+        'psiquiatra': a.psiquiatra,
+        'psicopedagogo': a.psicopedagogo,
+        'outros_profissionais': a.outros_profissionais,
+        'perfil_aluno': a.perfil_aluno,
+        'observacoes_gerais': a.observacoes_gerais,
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else "",
+        'responsavel_legal': a.responsavel_legal,
+        'orientador_responsavel': a.orientador_responsavel,
+        'supervisor': a.supervisor,
+        'gerente_unidade': a.gerente_unidade
+    } for a in alunos]), 200
+
+
+# ✅ Nova rota: Buscar histórico de alterações de um aluno
+@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
+def get_historico_pei(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+    resultado = []
+
+    for h in historico:
+        try:
+            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
+        except:
+            conteudo = {}
+
+        resultado.append({
+            'historico_id': h.id,
+            'pei_id': h.pei_id,
+            'student_id': h.student_id,
+            'editado_por': h.editado_por,
+            'data_edicao': h.data_edicao.isoformat(),
+            'conteudo': conteudo
+        })
+
+    return jsonify(resultado), 200
+
+
+# ✅ Nova rota: Visualizar uma versão específica do histórico
+@pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
+def get_versao_historico(history_id):
+    historia = PEIHistory.query.get(history_id)
+    if not historia:
+        return jsonify({"error": "Versão do histórico não encontrada"}), 404
+
+    try:
+        conteudo = json.loads(historia.conteudo_novo) if isinstance(historia.conteudo_novo, str) else historia.conteudo_novo
+        aluno_id = conteudo.get('student_id', historia.student_id)
+        aluno = Student.query.get(aluno_id)
+
+        return jsonify({
+            'aluno': aluno.to_dict(),
+            'conteudo': conteudo,
+            'historico_id': historia.id,
+            'pei_id': historia.pei_id,
+            'student_id': aluno.id,
+            'data_edicao': historia.data_edicao.isoformat(),
+            'usuario': f"Usuário {historia.editado_por}"
+        })
+    except Exception as e:
+        return jsonify({"error": "Erro ao carregar versão", "detalhe": str(e)}), 500
+
+
+# ✅ Nova rota: Exportar como PDF
+@pei_bp.route('/api/pei/pdf', methods=['POST'])
+def gerar_pdf():
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"error": "Dados inválidos para exportação"}), 400
+
+    logo_url = request.url_root + 'static/assets/senac-logo.png'
+
+    template = """
+    <html><head><meta charset="UTF-8"><style>
+    body {font-family: 'DejaVu Sans', sans-serif;padding: 40px;color: #333;font-size: 14px;}
+    .header {text-align: center;margin-bottom: 30px;}
+    .header img {max-width: 160px;margin-bottom: 10px;}
+    h1 {color: #003D7C;font-size: 24px;margin-top: 0;text-align: center;}
+    h2 {color: #003D7C;font-size: 18px;border-left: 4px solid #F7931E;padding-left: 10px;margin-top: 25px;}
+    table {width: 100%;border-collapse: collapse;margin: 20px 0;}
+    th, td {border: 1px solid #ccc;padding: 8px;text-align: left;}
+    .assinatura {display: flex;justify-content: space-between;margin-top: 40px;}
+    </style></head><body>
+    <div class="header">
+        <img src="{{ logo_url }}" alt="Logo Senac">
+        <h1>Plano Educacional Individualizado (PEI)</h1>
     </div>
-
-    <div class="grid-2">
-        <div>
-            <label for="periodo">Período Letivo:</label>
-            <input type="text" name="periodo" id="periodo" required readonly>
-        </div>
-        <div>
-            <label for="data_elaboracao">Data de Elaboração:</label>
-            <input type="date" name="data_elaboracao" id="data_elaboracao" required readonly>
-        </div>
+    <p><strong>Nome:</strong> {{ aluno.nome }}</p>
+    <p><strong>Curso:</strong> {{ aluno.curso }}</p>
+    <p><strong>Objetivos Gerais:</strong> {{ objetivos_gerais }}</p>
+    <h2>Metas Individuais</h2>
+    <table>
+        <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
+        <tr><td>Curto prazo</td><td>{{ meta_curto_prazo }}</td><td>{{ responsavel_curto }}</td><td>{{ avaliacao_curto }}</td></tr>
+        <tr><td>Médio prazo</td><td>{{ meta_medio_prazo }}</td><td>{{ responsavel_medio }}</td><td>{{ avaliacao_medio }}</td></tr>
+        <tr><td>Longo prazo</td><td>{{ meta_longo_prazo }}</td><td>{{ responsavel_longo }}</td><td>{{ avaliacao_longo }}</td></tr>
+    </table>
+    <h2>Adaptações Pedagógicas</h2>
+    <p>{{ adaptaçoes_pedagogicas }}</p>
+    <h2>Intervenções Complementares</h2>
+    <p>{{ intervencoes_complementares }}</p>
+    <h2>Perfil do Aluno</h2>
+    <p>{{ perfil_aluno }}</p>
+    <h2>Acompanhamento e Revisão do PEI</h2>
+    <p><strong>Observações gerais:</strong> {{ observacoes_gerais }}</p>
+    <p><strong>Data da próxima avaliação:</strong> {{ proxima_avaliacao }}</p>
+    <div class="assinatura">
+        <div>Responsável Legal<br>__________________________<br>{{ responsavel_legal }}</div>
+        <div>Orientador Responsável<br>__________________________<br>{{ orientador_responsavel }}</div>
+        <div>Supervisor<br>__________________________<br>{{ supervisor }}</div>
+        <div>Gerente de Unidade<br>__________________________<br>{{ gerente_unidade }}</div>
     </div>
+    </body></html>
+    """
 
-    <div class="grid-2">
-        <div>
-            <label for="responsavel">Responsável pela Elaboração:</label>
-            <input type="text" name="responsavel" id="responsavel" required readonly>
-        </div>
-        <div>
-            <label for="data_nascimento">Data de Nascimento:</label>
-            <input type="date" name="data_nascimento" id="data_nascimento" readonly>
-        </div>
-    </div>
+    rendered = render_template_string(template, logo_url=logo_url, **dados)
 
-    <div class="grid-2">
-        <div>
-            <label for="idade">Idade (anos):</label>
-            <input type="number" name="idade" id="idade" readonly>
-        </div>
-        <div>
-            <label for="diagnostico_cid">Diagnóstico CID:</label>
-            <input type="text" name="diagnostico_cid" id="diagnostico_cid" readonly>
-        </div>
-    </div>
-
-    <div class="grid-2">
-        <div>
-            <label for="transtorno_identificado">Transtorno Identificado:</label>
-            <input type="text" name="transtorno_identificado" id="transtorno_identificado" readonly>
-        </div>
-        <div>
-            <label for="laudo_medico">Laudo Médico:</label>
-            <select name="laudo_medico" id="laudo_medico" disabled>
-                <option value="">Selecione</option>
-                <option value="Sim">Sim</option>
-                <option value="Não">Não</option>
-            </select>
-        </div>
-    </div>
-
-    <div>
-        <label for="laudo_medico_arquivo">Upload Laudo:</label>
-        <input type="file" name="laudo_medico_arquivo" id="laudo_medico_arquivo" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" disabled>
-    </div>
-
-    <!-- Campos Editáveis -->
-    <label for="psicologo">Psicólogo:</label>
-    <input type="text" name="psicologo" id="psicologo" readonly>
-
-    <label for="psiquiatra">Psiquiatra:</label>
-    <input type="text" name="psiquiatra" id="psiquiatra" readonly>
-
-    <label for="psicopedagogo">Psicopedagogo:</label>
-    <input type="text" name="psicopedagogo" id="psicopedagogo" readonly>
-
-    <label for="outros_profissionais">Outros Profissionais:</label>
-    <input type="text" name="outros_profissionais" id="outros_profissionais" readonly>
-
-    <label for="perfil_aluno">Perfil do Aluno:</label>
-    <textarea name="perfil_aluno" id="perfil_aluno" readonly></textarea>
-
-    <label for="objetivos_gerais">Objetivos Gerais do PEI:</label>
-    <textarea name="objetivos_gerais" id="objetivos_gerais" readonly></textarea>
-
-    <label for="adaptaçoes_pedagogicas">Adaptações Pedagógicas:</label>
-    <textarea name="adaptaçoes_pedagogicas" id="adaptaçoes_pedagogicas" readonly></textarea>
-
-    <label for="intervencoes_complementares">Intervenções Complementares:</label>
-    <textarea name="intervencoes_complementares" id="intervencoes_complementares" readonly></textarea>
-
-    <h3>Metas Individuais</h3>
-    <div class="grid-3">
-        <div>
-            <label for="meta_curto_prazo">Meta (Curto prazo):</label>
-            <input type="text" name="meta_curto_prazo" id="meta_curto_prazo" readonly>
-        </div>
-        <div>
-            <label for="responsavel_curto">Responsável:</label>
-            <input type="text" name="responsavel_curto" id="responsavel_curto" readonly>
-        </div>
-        <div>
-            <label for="avaliacao_curto">Avaliação:</label>
-            <input type="text" name="avaliacao_curto" id="avaliacao_curto" readonly>
-        </div>
-    </div>
-
-    <div class="grid-3">
-        <div>
-            <label for="meta_medio_prazo">Meta (Médio prazo):</label>
-            <input type="text" name="meta_medio_prazo" id="meta_medio_prazo" readonly>
-        </div>
-        <div>
-            <label for="responsavel_medio">Responsável:</label>
-            <input type="text" name="responsavel_medio" id="responsavel_medio" readonly>
-        </div>
-        <div>
-            <label for="avaliacao_medio">Avaliação:</label>
-            <input type="text" name="avaliacao_medio" id="avaliacao_medio" readonly>
-        </div>
-    </div>
-
-    <div class="grid-3">
-        <div>
-            <label for="meta_longo_prazo">Meta (Longo prazo):</label>
-            <input type="text" name="meta_longo_prazo" id="meta_longo_prazo" readonly>
-        </div>
-        <div>
-            <label for="responsavel_longo">Responsável:</label>
-            <input type="text" name="responsavel_longo" id="responsavel_longo" readonly>
-        </div>
-        <div>
-            <label for="avaliacao_longo">Avaliação:</label>
-            <input type="text" name="avaliacao_longo" id="avaliacao_longo" readonly>
-        </div>
-    </div>
-
-    <label for="observacoes_gerais">Observações Gerais:</label>
-    <textarea name="observacoes_gerais" id="observacoes_gerais" rows="4" readonly></textarea>
-
-    <div class="grid-2">
-        <div>
-            <label for="proxima_avaliacao">Próxima Avaliação:</label>
-            <input type="date" name="proxima_avaliacao" id="proxima_avaliacao" readonly>
-        </div>
-    </div>
-
-    <div class="grid-2">
-        <div>
-            <label for="responsavel_legal">Responsável Legal:</label>
-            <input type="text" name="responsavel_legal" id="responsavel_legal" readonly>
-        </div>
-        <div>
-            <label for="orientador_responsavel">Orientador Responsável:</label>
-            <input type="text" name="orientador_responsavel" id="orientador_responsavel" readonly>
-        </div>
-    </div>
-
-    <div class="grid-2">
-        <div>
-            <label for="supervisor">Supervisor:</label>
-            <input type="text" name="supervisor" id="supervisor" readonly>
-        </div>
-        <div>
-            <label for="gerente_unidade">Gerente da Unidade:</label>
-            <input type="text" name="gerente_unidade" id="gerente_unidade" readonly>
-        </div>
-    </div>
-
-    <div class="button-group">
-        <button type="submit" class="btn-salvar" onclick="handleSubmit(event)">Salvar PEI</button>
-        <button type="button" class="btn-editar" onclick="editarCampos()">Editar Dados</button>
-        <button type="button" class="btn-finalizar" onclick="location.href='/dashboard'">← Voltar</button>
-    </div>
-
-    <p id="msg"></p>
-</div>
-
-<script>
-    const msgEl = document.getElementById('msg');
-
-    // Função chamada ao enviar o formulário
-    async function handleSubmit(event) {
-        event.preventDefault();
-
-        const alunoData = {
-            student_id: document.getElementById("student_id")?.value || "",
-            nome: document.getElementById("nome")?.value.trim() || "",
-            curso: document.getElementById("curso")?.value.trim() || "",
-            unidade: document.getElementById("unidade")?.value.trim() || "",
-            periodo: document.getElementById("periodo")?.value.trim() || "",
-            data_elaboracao: document.getElementById("data_elaboracao")?.value || "",
-            responsavel: document.getElementById("responsavel")?.value.trim() || "",
-            data_nascimento: document.getElementById("data_nascimento")?.value || "",
-            idade: document.getElementById("idade")?.value || "",
-            diagnostico_cid: document.getElementById("diagnostico_cid")?.value || "",
-            transtorno_identificado: document.getElementById("transtorno_identificado")?.value || "",
-            laudo_medico: document.getElementById("laudo_medico")?.value || "",
-            psicologo: document.getElementById("psicologo")?.value || "",
-            psiquiatra: document.getElementById("psiquiatra")?.value || "",
-            psicopedagogo: document.getElementById("psicopedagogo")?.value || "",
-            outros_profissionais: document.getElementById("outros_profissionais")?.value || "",
-            perfil_aluno: document.getElementById("perfil_aluno")?.value || "",
-            observacoes_gerais: document.getElementById("observacoes_gerais")?.value || "",
-            proxima_avaliacao: document.getElementById("proxima_avaliacao")?.value || "",
-            responsavel_legal: document.getElementById("responsavel_legal")?.value || "",
-            orientador_responsavel: document.getElementById("orientador_responsavel")?.value || "",
-            supervisor: document.getElementById("supervisor")?.value || "",
-            gerente_unidade: document.getElementById("gerente_unidade")?.value || ""
-        };
-
-        const conteudoData = {
-            objetivos_gerais: document.getElementById("objetivos_gerais")?.value || "",
-            adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas")?.value || "",
-            intervencoes_complementares: document.getElementById("intervencoes_complementares")?.value || "",
-            metas: {
-                curto_prazo: {
-                    meta: document.getElementById("meta_curto_prazo")?.value || "",
-                    responsavel: document.getElementById("responsavel_curto")?.value || "",
-                    avaliacao: document.getElementById("avaliacao_curto")?.value || ""
-                },
-                medio_prazo: {
-                    meta: document.getElementById("meta_medio_prazo")?.value || "",
-                    responsavel: document.getElementById("responsavel_medio")?.value || "",
-                    avaliacao: document.getElementById("avaliacao_medio")?.value || ""
-                },
-                longo_prazo: {
-                    meta: document.getElementById("meta_longo_prazo")?.value || "",
-                    responsavel: document.getElementById("responsavel_longo")?.value || "",
-                    avaliacao: document.getElementById("avaliacao_longo")?.value || ""
-                }
-            }
-        };
-
-        // Valida campos obrigatórios
-        const requiredFields = [
-            { field: alunoData.nome, label: "Nome" },
-            { field: alunoData.curso, label: "Curso" },
-            { field: alunoData.unidade, label: "Unidade" },
-            { field: alunoData.periodo, label: "Período" },
-            { field: alunoData.responsavel, label: "Responsável" }
-        ];
-
-        const missing = requiredFields.filter(f => !f.field);
-
-        if (missing.length > 0) {
-            msgEl.className = "red";
-            msgEl.innerText = "⚠️ Campos obrigatórios ausentes.";
-            return;
-        }
-
-        try {
-            const res = await fetch("/api/pei", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                msgEl.className = "green";
-                msgEl.innerText = data.message || "✅ Cadastro salvo com sucesso!";
-            } else {
-                throw new Error(data.error || "Erro desconhecido");
-            }
-        } catch (err) {
-            console.error("Erro ao salvar:", err);
-            msgEl.className = "red";
-            msgEl.innerText = "❌ Erro ao salvar: " + err.message;
-        }
+    options = {
+        'encoding': 'utf-8',
+        'enable-local-file-access': '',
+        'no-stop-slow-scripts': ''
     }
 
-    // Libera edição dos campos permitidos
-    function editarCampos() {
-        const editaveis = [
-            'psicologo',
-            'psiquiatra',
-            'psicopedagogo',
-            'outros_profissionais',
-            'perfil_aluno',
-            'objetivos_gerais',
-            'adaptaçoes_pedagogicas',
-            'intervencoes_complementares',
-            'meta_curto_prazo',
-            'responsavel_curto',
-            'avaliacao_curto',
-            'meta_medio_prazo',
-            'responsavel_medio',
-            'avaliacao_medio',
-            'meta_longo_prazo',
-            'responsavel_longo',
-            'avaliacao_longo',
-            'observacoes_gerais',
-            'proxima_avaliacao'
-        ];
+    try:
+        pdf = pdfkit.from_string(rendered, False, options=options)
+        return pdf, 200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f"attachment; filename=pei_{dados.get('aluno', {}).get('nome', 'aluno')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        }
+    except Exception as e:
+        return jsonify({"error": "Erro ao gerar PDF", "detalhe": str(e)}), 500
 
-        const todosCampos = document.querySelectorAll(`input, textarea`);
-        Array.from(todosCampos).forEach(campo => {
-            campo.readOnly = !editaveis.includes(campo.id);
-            campo.disabled = !editaveis.includes(campo.id);
-        });
 
-        document.getElementById("laudo_medico").disabled = false;
-        document.getElementById("laudo_medico_arquivo").disabled = false;
+# ✅ Nova rota: Baixar CSV com todos os alunos
+@pei_bp.route('/api/alunos/csv', methods=['GET'])
+def baixar_csv():
+    alunos = Student.query.all()
+    if not alunos:
+        return jsonify({"error": "Nenhum aluno cadastrado"}), 404
 
-        msgEl.className = "green";
-        msgEl.innerText = "Você está editando o cadastro.";
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
+        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
+        "Transtorno Identificado", "Laudo Médico", "Psicólogo", "Psiquiatra",
+        "Psicopedagogo", "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
+        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente Unidade"
+    ])
+
+    for aluno in alunos:
+        writer.writerow([
+            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
+            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
+            aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
+            aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
+            aluno.observacoes_gerais,
+            aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
+            aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
+            aluno.gerente_unidade
+        ])
+
+    output.seek(0)
+    return output.getvalue(), 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": "attachment; filename=alunos.csv"
     }
 
-    // Carrega aluno se vier com ?id=
-    window.onload = async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = urlParams.get('id');
 
-        if (!studentId) return;
+# ✅ Nova rota: Baixar Excel com todos os alunos
+@pei_bp.route('/api/alunos/excel', methods=['GET'])
+def baixar_excel():
+    alunos = Student.query.all()
+    if not alunos:
+        return jsonify({"error": "Nenhum aluno cadastrado"}), 404
 
-        try {
-            const res = await fetch(`/api/alunos/${studentId}`);
-            const data = await res.json();
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Alunos Cadastrados"
 
-            if (!data.aluno) {
-                alert("❌ Erro ao carregar aluno.");
-                return;
-            }
+    ws.append([
+        "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
+        "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
+        "Transtorno Identificado", "Laudo Médico", "Psicólogo", "Psiquiatra",
+        "Psicopedagogo", "Outros Profissionais", "Perfil Aluno", "Observações Gerais",
+        "Próxima Avaliação", "Responsável Legal", "Orientador", "Supervisor", "Gerente Unidade"
+    ])
 
-            const aluno = data.aluno;
-            const conteudo = data.conteudo;
+    for aluno in alunos:
+        ws.append([
+            aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
+            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
+            aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
+            aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
+            aluno.observacoes_gerais,
+            aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
+            aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
+            aluno.gerente_unidade
+        ])
 
-            document.getElementById("student_id").value = aluno.id;
-            document.getElementById("nome").value = aluno.nome || "";
-            document.getElementById("curso").value = aluno.curso || "";
-            document.getElementById("unidade").value = aluno.unidade || "";
-            document.getElementById("periodo").value = aluno.periodo || "";
-            document.getElementById("data_elaboracao").value = aluno.data_elaboracao ? aluno.data_elaboracao.split("T")[0] : "";
-            document.getElementById("responsavel").value = aluno.responsavel || "";
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
 
-            document.getElementById("data_nascimento").value = aluno.data_nascimento ? aluno.data_nascimento.split("T")[0] : "";
-            document.getElementById("idade").value = aluno.idade || "";
-            document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
-            document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
-            document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
-            document.getElementById("psicologo").value = aluno.psicologo || "";
-            document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
-            document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
-            document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
-            document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
-            document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
-            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? aluno.proxima_avaliacao.split("T")[0] : "";
-            document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
-            document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
-            document.getElementById("supervisor").value = aluno.supervisor || "";
-            document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
+    return send_file(
+        excel_file,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='alunos_pei.xlsx'
+    )
 
-            // Conteúdo do PEI
-            if (conteudo.objetivos_gerais) document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais;
-            if (conteudo.adaptaçoes_pedagogicas) document.getElementById("adaptaçoes_pedagogicas").value = conteudo.adaptaçoes_pedagogicas;
-            if (conteudo.intervencoes_complementares) document.getElementById("intervencoes_complementares").value = conteudo.intervencoes_complementares;
 
-            if (conteudo.metas?.curto_prazo?.meta) document.getElementById("meta_curto_prazo").value = conteudo.metas.curto_prazo.meta;
-            if (conteudo.metas?.curto_prazo?.responsavel) document.getElementById("responsavel_curto").value = conteudo.metas.curto_prazo.responsavel;
-            if (conteudo.metas?.curto_prazo?.avaliacao) document.getElementById("avaliacao_curto").value = conteudo.metas.curto_prazo.avaliacao;
+# ✅ Nova rota: Excluir aluno por ID
+@pei_bp.route('/api/alunos/excluir/<int:id>', methods=['DELETE'])
+def excluir_registro(id):
+    aluno = Student.query.get(id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado."}), 404
 
-            if (conteudo.metas?.medio_prazo?.meta) document.getElementById("meta_medio_prazo").value = conteudo.metas.medio_prazo.meta;
-            if (conteudo.metas?.medio_prazo?.responsavel) document.getElementById("responsavel_medio").value = conteudo.metas.medio_prazo.responsavel;
-            if (conteudo.metas?.medio_prazo?.avaliacao) document.getElementById("avaliacao_medio").value = conteudo.metas.medio_prazo.avaliacao;
+    try:
+        db.session.delete(aluno)
+        db.session.commit()
+        return jsonify({"message": f"✅ Aluno {id} excluído com sucesso!"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "❌ Erro ao excluir aluno.", "detalhe": str(e)}), 500
 
-            if (conteudo.metas?.longo_prazo?.meta) document.getElementById("meta_longo_prazo").value = conteudo.metas.longo_prazo.meta;
-            if (conteudo.metas?.longo_prazo?.responsavel) document.getElementById("responsavel_longo").value = conteudo.metas.longo_prazo.responsavel;
-            if (conteudo.metas?.longo_prazo?.avaliacao) document.getElementById("avaliacao_longo").value = conteudo.metas.longo_prazo.avaliacao;
 
-        } catch (err) {
-            console.error("Erro ao carregar aluno:", err);
-            msgEl.className = "red";
-            msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
-        }
-    };
-</script>
-
-</body>
-</html>
+# ✅ Nova rota: Excluir todos os alunos
+@pei_bp.route('/api/alunos/excluir-tudo', methods=['DELETE'])
+def excluir_todos_registros():
+    try:
+        Student.query.delete()
+        db.session.commit()
+        return jsonify({"message": "✅ Todos os registros foram excluídos."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "❌ Erro ao limpar registros.", "detalhe": str(e)}), 500
