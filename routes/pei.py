@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, render_template_string, send_file
+from flask import Blueprint, request, jsonify, render_template_string, send_file
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
@@ -12,11 +12,9 @@ import openpyxl
 from io import BytesIO
 
 
-# Pasta para uploads
+pei_bp = Blueprint('pei', __name__)
 UPLOAD_FOLDER = 'static/laudos'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
-
-pei_bp = Blueprint('pei', __name__)
 
 
 def allowed_file(filename):
@@ -32,47 +30,9 @@ def parse_date(date_str):
         return None
 
 
-def verificar_e_criar_colunas():
-    """
-    Verifica se todas as colunas existem na tabela 'student' e cria se necessário
-    """
-    engine = db.engine
-    inspector = db.inspect(engine)
-
-    if 'student' not in inspector.get_table_names():
-        print("⚠️ Tabela 'student' não existe")
-        return
-
-    columns = [col['name'] for col in inspector.get_columns('student')]
-    missing_cols = []
-
-    # Colunas a serem verificadas
-    colunas_necessarias = {
-        'laudo_medico_arquivo': 'VARCHAR(255)',
-        'responsavel_legal': 'VARCHAR(150)',
-        'orientador_responsavel': 'VARCHAR(150)',
-        'supervisor': 'VARCHAR(150)',
-        'gerente_unidade': 'VARCHAR(150)'
-    }
-
-    for col_name, col_type in colunas_necessarias.items():
-        if col_name not in columns:
-            missing_cols.append(f"ADD COLUMN {col_name} {col_type}")
-
-    if missing_cols:
-        with engine.connect() as conn:
-            for col_sql in missing_cols:
-                try:
-                    conn.execute(f"ALTER TABLE student {col_sql};")
-                    print(f"[INFO] Coluna '{col_sql}' criada na tabela 'student'")
-                except Exception as e:
-                    print(f"[ERRO] Falha ao criar coluna '{col_sql}': {e}")
-            conn.commit()
-
-
-# ✅ Rota principal: Salvar ou editar um PEI
+# ✅ Função principal: Salvar ou editar PEI
 @pei_bp.route('/api/pei', methods=['POST'])
-def salvar_pei():
+def criar_pei():
     try:
         if request.is_json:
             data = request.get_json()
@@ -81,10 +41,8 @@ def salvar_pei():
         else:
             aluno_json = request.form.get('aluno')
             conteudo_json = request.form.get('conteudo')
-
             if not aluno_json or not conteudo_json:
                 return jsonify({"error": "Dados ausentes no formulário"}), 400
-
             aluno_data = json.loads(aluno_json)
             conteudo_data = json.loads(conteudo_json)
 
@@ -122,7 +80,6 @@ def salvar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-        # Upload opcional de arquivo
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
@@ -130,18 +87,15 @@ def salvar_pei():
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 aluno.laudo_medico_arquivo = filename
 
-        # Conteúdo do PEI
         pei = PEI(student_id=aluno.id, conteudo=json.dumps(conteudo_data, ensure_ascii=False))
         db.session.add(pei)
 
-        # Histórico da edição
         historico = PEIHistory(
             pei_id=pei.id,
             editado_por=session.get('user_id') or 1,
             student_id=aluno.id,
             conteudo_anterior="{}",
-            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False),
-            data_edicao=datetime.now()
+            conteudo_novo=json.dumps(conteudo_data, ensure_ascii=False)
         )
         db.session.add(historico)
 
@@ -162,7 +116,7 @@ def salvar_pei():
         }), 500
 
 
-# ✅ Nova rota: Buscar aluno por ID (para edição)
+# ✅ Buscar aluno por ID
 @pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
 def buscar_aluno_por_id(student_id):
     aluno = Student.query.get(student_id)
@@ -177,8 +131,8 @@ def buscar_aluno_por_id(student_id):
     if pei:
         try:
             conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
-        except Exception as e:
-            print(f"[ERRO] Falha ao carregar conteúdo do PEI ID {pei.id}: {e}")
+        except:
+            pass
 
     aluno_dict.update({
         'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
@@ -201,13 +155,45 @@ def buscar_aluno_por_id(student_id):
     return jsonify({'aluno': aluno_dict, 'conteudo': conteudo}), 200
 
 
-# ✅ Nova rota: Listar todos os alunos (para /registros)
+# ✅ Buscar alunos por nome
 @pei_bp.route('/api/alunos', methods=['GET'])
-def listar_todos_alunos():
-    alunos = Student.query.all()
-    if not alunos:
+def buscar_alunos():
+    nome = request.args.get('nome')
+    if not nome:
         return jsonify([]), 200
 
+    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
+    return jsonify([{
+        'id': a.id,
+        'nome': a.nome,
+        'curso': a.curso,
+        'unidade': a.unidade,
+        'periodo': a.periodo,
+        'data_elaboracao': a.data_elaboracao.isoformat() if a.data_elaboracao else "",
+        'responsavel': a.responsavel,
+        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
+        'idade': a.idade,
+        'diagnostico_cid': a.diagnostico_cid,
+        'transtorno_identificado': a.transtorno_identificado,
+        'laudo_medico': a.laudo_medico,
+        'psicologo': a.psicologo,
+        'psiquiatra': a.psiquiatra,
+        'psicopedagogo': a.psicopedagogo,
+        'outros_profissionais': a.outros_profissionais,
+        'perfil_aluno': a.perfil_aluno,
+        'observacoes_gerais': a.observacoes_gerais,
+        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else "",
+        'responsavel_legal': a.responsavel_legal,
+        'orientador_responsavel': a.orientador_responsavel,
+        'supervisor': a.supervisor,
+        'gerente_unidade': a.gerente_unidade
+    } for a in alunos]), 200
+
+
+# ✅ Listar todos os alunos (para registro.html)
+@pei_bp.route('/api/alunos/listar', methods=['GET'])
+def listar_todos_alunos():
+    alunos = Student.query.all()
     return jsonify([{
         'id': a.id,
         'nome': a.nome,
@@ -217,58 +203,7 @@ def listar_todos_alunos():
     } for a in alunos]), 200
 
 
-# ✅ Nova rota: Buscar histórico de alterações de um aluno
-@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
-def get_historico_pei(student_id):
-    aluno = Student.query.get(student_id)
-    if not aluno:
-        return jsonify({"error": "Aluno não encontrado"}), 404
-
-    historico = PEIHistory.query.filter_by(student_id=student_id).all()
-
-    resultado = []
-    for h in historico:
-        try:
-            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
-        except:
-            conteudo = {}
-
-        resultado.append({
-            'historico_id': h.id,
-            'pei_id': h.pei_id,
-            'editado_por': h.editado_por,
-            'data_edicao': h.data_edicao.isoformat(),
-            'conteudo': conteudo
-        })
-
-    return jsonify(resultado), 200
-
-
-# ✅ Nova rota: Buscar versão do histórico
-@pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
-def get_versao_historico(history_id):
-    historia = PEIHistory.query.get(history_id)
-    if not historia:
-        return jsonify({"error": "Versão do histórico não encontrada"}), 404
-
-    try:
-        conteudo = json.loads(historia.conteudo_novo) if isinstance(historia.conteudo_novo, str) else historia.conteudo_novo
-        aluno = Student.query.get(conteudo.get('student_id', historia.student_id))
-
-        return jsonify({
-            'aluno': aluno.to_dict(),
-            'conteudo': conteudo,
-            'historico_id': historia.id,
-            'pei_id': historia.pei_id,
-            'student_id': aluno.id,
-            'data_edicao': historia.data_edicao.isoformat(),
-            'usuario': f"Usuário {historia.editado_por}"
-        })
-    except Exception as e:
-        return jsonify({"error": "Erro ao carregar versão", "detalhe": str(e)}), 500
-
-
-# ✅ Nova rota: Exportação de PDF do PEI
+# ✅ Exportação PDF
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
@@ -279,7 +214,7 @@ def gerar_pdf():
 
     template = """
     <html><head><meta charset="UTF-8"><style>
-    body {font-family: 'DejaVu Sans', 'Roboto', sans-serif;padding: 40px;color: #333;font-size: 14px;}
+    body {font-family: 'DejaVu Sans', sans-serif;padding: 40px;color: #333;font-size: 14px;}
     .header {text-align: center;margin-bottom: 30px;}
     .header img {max-width: 160px;margin-bottom: 10px;}
     h1 {color: #003D7C;font-size: 24px;margin-top: 0;text-align: center;}
@@ -341,7 +276,59 @@ def gerar_pdf():
         }), 500
 
 
-# ✅ Nova rota: Baixar CSV com todos os alunos
+# ✅ Histórico
+@pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
+def get_historico_pei(student_id):
+    aluno = Student.query.get(student_id)
+    if not aluno:
+        return jsonify({"error": "Aluno não encontrado"}), 404
+
+    historico = PEIHistory.query.filter_by(student_id=student_id).all()
+
+    resultado = []
+    for h in historico:
+        try:
+            conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
+        except:
+            conteudo = {}
+
+        resultado.append({
+            'historico_id': h.id,
+            'pei_id': h.pei_id,
+            'student_id': h.student_id,
+            'editado_por': h.editado_por,
+            'data_edicao': h.data_edicao.isoformat(),
+            'conteudo': conteudo
+        })
+
+    return jsonify(resultado), 200
+
+
+# ✅ Versão específica do histórico
+@pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
+def get_versao_historico(history_id):
+    historia = PEIHistory.query.get(history_id)
+    if not historia:
+        return jsonify({"error": "Versão do histórico não encontrada"}), 404
+
+    try:
+        conteudo = json.loads(historia.conteudo_novo) if isinstance(historia.conteudo_novo, str) else historia.conteudo_novo
+        aluno = Student.query.get(conteudo.get('student_id', historia.student_id))
+
+        return jsonify({
+            'aluno': aluno.to_dict(),
+            'conteudo': conteudo,
+            'historico_id': historia.id,
+            'pei_id': historia.pei_id,
+            'student_id': aluno.id,
+            'data_edicao': historia.data_edicao.isoformat(),
+            'usuario': f"Usuário {historia.editado_por}"
+        })
+    except Exception as e:
+        return jsonify({"error": "Erro ao carregar versão", "detalhe": str(e)}), 500
+
+
+# ✅ Baixar CSV
 @pei_bp.route('/api/alunos/csv', methods=['GET'])
 def baixar_csv():
     alunos = Student.query.all()
@@ -350,7 +337,6 @@ def baixar_csv():
 
     output = StringIO()
     writer = csv.writer(output)
-
     writer.writerow([
         "ID", "Nome", "Curso", "Unidade", "Período", "Data Elaboração",
         "Responsável", "Data Nascimento", "Idade", "Diagnóstico CID",
@@ -362,11 +348,13 @@ def baixar_csv():
     for aluno in alunos:
         writer.writerow([
             aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
-            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "", aluno.responsavel,
-            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "", aluno.idade,
-            aluno.diagnostico_cid, aluno.transtorno_identificado, aluno.laudo_medico,
-            aluno.psicologo, aluno.psiquiatra, aluno.psicopedagogo,
-            aluno.outros_profissionais, aluno.perfil_aluno, aluno.observacoes_gerais,
+            aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
+            aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
+            aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
+            aluno.observacoes_gerais,
             aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
             aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
             aluno.gerente_unidade
@@ -379,7 +367,7 @@ def baixar_csv():
     }
 
 
-# ✅ Nova rota: Baixar Excel com todos os alunos
+# ✅ Baixar Excel
 @pei_bp.route('/api/alunos/excel', methods=['GET'])
 def baixar_excel():
     alunos = Student.query.all()
@@ -402,7 +390,8 @@ def baixar_excel():
         ws.append([
             aluno.id, aluno.nome, aluno.curso, aluno.unidade, aluno.periodo,
             aluno.data_elaboracao.isoformat() if aluno.data_elaboracao else "",
-            aluno.responsavel, aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
+            aluno.responsavel,
+            aluno.data_nascimento.isoformat() if aluno.data_nascimento else "",
             aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
             aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
             aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
@@ -423,7 +412,7 @@ def baixar_excel():
     )
 
 
-# ✅ Nova rota: Excluir aluno por ID
+# ✅ Excluir aluno
 @pei_bp.route('/api/alunos/excluir/<int:id>', methods=['DELETE'])
 def excluir_registro(id):
     aluno = Student.query.get(id)
@@ -437,39 +426,3 @@ def excluir_registro(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "❌ Erro ao excluir aluno.", "detalhe": str(e)}), 500
-
-
-# ✅ Nova rota: Excluir todos os alunos
-@pei_bp.route('/api/alunos/excluir-tudo', methods=['DELETE'])
-def excluir_todos_registros():
-    try:
-        Student.query.delete()
-        db.session.commit()
-        return jsonify({"message": "✅ Todos os registros foram excluídos."}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "❌ Erro ao limpar registros.", "detalhe": str(e)}), 500
-
-
-# ✅ Função auxiliar: Busca aluno por nome (usada em search.html)
-@pei_bp.route('/api/alunos/buscar', methods=['GET'])
-def buscar_alunos_por_nome():
-    nome = request.args.get('nome')
-    if not nome:
-        return jsonify([]), 200
-
-    alunos = Student.query.filter(Student.nome.ilike(f'%{nome}%')).all()
-    return jsonify([a.to_dict() for a in alunos]), 200
-
-
-# ✅ Rota: Listar todos os alunos (registro.html)
-@pei_bp.route('/api/alunos/listar', methods=['GET'])
-def listar_todos_alunos():
-    alunos = Student.query.all()
-    return jsonify([{
-        'id': a.id,
-        'nome': a.nome,
-        'curso': a.curso,
-        'data_nascimento': a.data_nascimento.isoformat() if a.data_nascimento else "",
-        'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else ""
-    } for a in alunos]), 200
