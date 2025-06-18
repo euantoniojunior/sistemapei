@@ -18,6 +18,13 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "role": self.role
+        }
+
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -51,6 +58,7 @@ class Student(db.Model):
     gerente_unidade = db.Column(db.String(150))
 
     def to_dict(self):
+        """Retorna os dados do aluno como dicionário"""
         return {
             'id': self.id,
             'nome': self.nome,
@@ -92,6 +100,7 @@ class PEI(db.Model):
     aluno = db.relationship('Student', backref='peis')
 
     def get_conteudo(self):
+        """Retorna o conteúdo do PEI como dicionário JSON"""
         try:
             return json.loads(self.conteudo) if isinstance(self.conteudo, str) else self.conteudo
         except Exception as e:
@@ -108,7 +117,7 @@ class PEIHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pei_id = db.Column(db.Integer, db.ForeignKey('pei.id'))
     editado_por = db.Column(db.Integer, db.ForeignKey('user.id'))
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))  # Novo campo
     conteudo_anterior = db.Column(db.Text)  # JSON antes da edição
     conteudo_novo = db.Column(db.Text)      # JSON após a edição
     data_edicao = db.Column(db.DateTime, default=datetime.utcnow)
@@ -116,6 +125,19 @@ class PEIHistory(db.Model):
     pei = db.relationship('PEI', backref='historicos')
     editor = db.relationship('User', backref='edicoes_pei')
     aluno = db.relationship('Student', backref='historico_pei')
+
+    def to_dict(self):
+        """Retorna histórico como dicionário JSON"""
+        return {
+            'historico_id': self.id,
+            'pei_id': self.pei_id,
+            'student_id': self.student_id,
+            'editado_por': self.editado_por,
+            'usuario': self.editor.username if self.editor else "Desconhecido",
+            'data_edicao': self.data_edicao.isoformat(),
+            'conteudo_anterior': json.loads(self.conteudo_anterior) if self.conteudo_anterior else {},
+            'conteudo_novo': json.loads(self.conteudo_novo) if self.conteudo_novo else {}
+        }
 
     def __repr__(self):
         return f'<PEIHistory PEI={self.pei_id}, Editor={self.editado_por}, Data={self.data_edicao}>'
