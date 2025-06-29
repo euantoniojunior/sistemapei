@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Histórico - Evolução do Cadastro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .container-historico {
+      display: flex;
+      gap: 30px;
+      padding: 40px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .dados-principais {
+      flex: 1;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+
+    .historico-lateral {
+      flex: 1;
+      background: #f9f9f9;    
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card-historico {
+      background: #fef8ec;
+      border-left: 5px solid #F7931E;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .card-historico:hover {
+      background-color: #f2f2f2;
+    }
+
+    h3 {
+      margin-top: 0;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .btn-voltar {
+      background-color: #003D7C;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-voltar:hover {
+      background-color: #002a54;
+    }
+  </style>
+</head>
+<body>
+
+<div class="form-container">
+  <h2>Histórico de Alterações</h2>
+
+  <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+  <button onclick="buscarAluno()" style="margin-top:10px;">Buscar</button>
+
+  <div class="container-historico" style="margin-top: 30px;">
+    <!-- Dados Principais -->
+    <div class="dados-principais" id="dadosPrincipais">
+      <p><strong>Nome:</strong> <span id="nome">N/A</span></p>
+      <p><strong>Curso:</strong> <span id="curso">N/A</span></p>
+      <p><strong>Unidade:</strong> <span id="unidade">N/A</span></p>
+      <p><strong>Data de Elaboração:</strong> <span id="data_elaboracao">N/A</span></p>
+      <p><strong>Responsável:</strong> <span id="responsavel">N/A</span></p>
+    </div>
+
+    <!-- Histórico Lateral -->
+    <div class="historico-lateral" id="historicoLateral">
+      <h3>Evoluções Registradas</h3>
+      <p>Nenhum aluno selecionado ainda.</p>
+    </div>
+  </div>
+
+  <div class="button-group">
+    <a href="/dashboard" style="text-decoration: none;">
+      <button class="btn-voltar">← Voltar ao Dashboard</button>
+    </a>
+  </div>
+</div>
+
+<script>
+  async function buscarAluno() {
+    const studentName = document.getElementById('studentName').value.trim();
+    const dadosPrincipais = document.getElementById('dadosPrincipais');
+    const historicoLateral = document.getElementById('historicoLateral');
+
+    if (!studentName) {
+      alert("⚠️ Digite o nome de um aluno.");
+      return;
+    }
+
+    try {
+      // Passo 1: Buscar aluno(s)
+      const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
+      const alunos = await res.json();
+
+      if (!alunos.length) {
+        alert("❌ Nenhum aluno encontrado.");
+        return;
+      }
+
+      const aluno = alunos[0]; // Apenas o primeiro para carregar histórico
+
+      // Preenche os dados do aluno
+      document.getElementById("nome").textContent = aluno.nome || "N/A";
+      document.getElementById("curso").textContent = aluno.curso || "N/A";
+      document.getElementById("unidade").textContent = aluno.unidade || "N/A";
+      document.getElementById("data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
+      document.getElementById("responsavel").textContent = aluno.responsavel || "N/A";
+
+      // Passo 2: Carregar histórico do aluno
+      const histRes = await fetch(`/api/pei/historico/${aluno.id}`);
+      const historico = await histRes.json();
+
+      if (!histRes.ok || !historico.length) {
+        historicoLateral.innerHTML = '<p>Nenhuma alteração registrada.</p>';
+        return;
+      }
+
+      // Renderiza histórico na lateral
+      historicoLateral.innerHTML = `<h3>Versões Registradas</h3>`;
+      historico.forEach(h => {
+        const dataFormatada = new Date(h.data_edicao).toLocaleString();
+        const usuario = h.usuario || "Usuário desconhecido";
+
+        historicoLateral.innerHTML += `
+          <div class="card-historico" onclick="abrirPreview(${h.pei_id}, ${h.historico_id})">
+            <small>${dataFormatada}</small><br>
+            <strong>Versão ID: ${h.historico_id}</strong><br>
+            <em>${usuario}</em>
+          </div>`;
+      });
+
+    } catch (err) {
+      console.error("Erro ao carregar histórico:", err);
+      alert("❌ Erro ao carregar histórico.");
+    }
+  }
+
+  function abrirPreview(pei_id, history_id) {
+    window.open(`/preview_versao?id=${pei_id}&history_id=${history_id}`, '_blank');
+  }
+</script>
+
+</body>
+</html>

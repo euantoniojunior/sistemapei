@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Criar Usuário</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="login-container">
+    <img src="/static/assets/senac-logo.png" class="logo" alt="SENAC">
+    <h2>Criar Novo Usuário</h2>
+    <input type="text" id="username" placeholder="Novo usuário">
+    <input type="password" id="password" placeholder="Senha">
+    <button onclick="registrar()">Registrar</button>
+    <p id="msg"></p>
+    <a href="/">Voltar ao Login</a>
+  </div>
+
+  <script>
+    async function registrar() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const msgEl = document.getElementById('msg');
+      
+      // Validação simples no frontend
+      if (!username || !password) {
+        msgEl.style.color = 'red';
+        msgEl.innerText = 'Por favor, preencha todos os campos.';
+        return;
+      }
+
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        msgEl.style.color = 'green';  // ✅ Agora em verde!
+        msgEl.innerText = '✅ Usuário criado com sucesso!';
+        
+        // Redireciona após 2 segundos
+        setTimeout(() => {
+          location.href = '/';
+        }, 2000);
+      } else {
+        msgEl.style.color = 'red';
+        msgEl.innerText = '❌ ' + (data.error || 'Erro ao criar usuário.');
+      }
+    }
+  </script>
+</body>
+</html>

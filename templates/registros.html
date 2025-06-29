@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciar Registros - Sistema PEI</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .form-container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h2 {
+      color: #003D7C;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .listagem {
+      margin-top: 30px;
+    }
+    .registro-card {
+      background: #f9f9f9;
+      border: 1px solid #eee;
+      border-left: 5px solid #F7931E;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      position: relative;
+    }
+    .registro-card strong {
+      color: #003D7C;
+    }
+    .botoes-acoes {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .btn-excluir {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-excluir:hover {
+      background-color: #c0392b;
+    }
+    .btn-limpar {
+      background-color: #e67e22;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-limpar:hover {
+      background-color: #d35400;
+    }
+    button.btn-voltar {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #003D7C;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    button.btn-voltar:hover {
+      background-color: #002a52;
+    }
+  </style>
+</head>
+<body>
+  <button class="btn-voltar" onclick="location.href='/dashboard'">⬅ Voltar ao Dashboard</button>
+
+  <div class="form-container">
+    <h2>Registros de Alunos</h2>
+    <div class="botoes-acoes">
+      <button class="btn-limpar" onclick="limparTodos()">Limpar Todos os Registros</button>
+    </div>
+
+    <div id="listagemArea" class="listagem"></div>
+  </div>
+
+  <script>
+    // Carrega todos os alunos
+    async function carregarRegistros() {
+      const area = document.getElementById("listagemArea");
+      try {
+        const res = await fetch("/api/alunos/all");
+        const alunos = await res.json();
+        area.innerHTML = "";
+        if (!alunos.length) {
+          area.innerHTML = "<p>Nenhum aluno cadastrado.</p>";
+          return;
+        }
+        alunos.forEach(a => {
+          area.innerHTML += `
+            <div class="registro-card">
+              <strong>ID:</strong> ${a.id}<br>
+              <strong>Nome:</strong> ${a.nome}<br>
+              <strong>Curso:</strong> ${a.curso || 'N/A'}<br>
+              <strong>Unidade:</strong> ${a.unidade || 'N/A'}<br>
+              <strong>Data de Elaboração:</strong> ${a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A'}
+              <div style="text-align:right; margin-top: 10px;">
+                <button class="btn-excluir" onclick="excluir(${a.id})">Excluir Registro</button>
+              </div>
+            </div>`;
+        });
+      } catch (err) {
+        console.error("Erro ao carregar registros:", err);
+        document.getElementById("msg").innerText = "❌ Falha ao carregar registros.";
+      }
+    }
+
+    // Exclui aluno específico
+    async function excluir(id) {
+      if (!confirm("Tem certeza que deseja excluir esse aluno?")) return;
+
+      const res = await fetch(`/api/alunos/${id}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      alert(data.message);
+      carregarRegistros();
+    }
+
+    // Exclui todos os alunos
+    async function limparTodos() {
+      if (!confirm("Tem certeza que deseja excluir TODOS os alunos?")) return;
+
+      const res = await fetch("/api/alunos", {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      alert(data.message);
+      carregarRegistros();
+    }
+
+    window.onload = carregarRegistros;
+  </script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+/* style.css - Estilo global */
+
+/* =================== Botões =================== */
+.btn-voltar {
+  display: block;
+  width: auto;
+  min-width: 180px;
+  padding: 10px 16px;
+  background-color: #003D7C;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 30px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+.btn-voltar:hover {
+  background-color: #002a54;
+}
+
+/* =================== Reset Básico =================== */
+* {
+  box-sizing: border-box;
+}
+
+/* =================== Estilo do Body =================== */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f7fa;
+  color: #333;
+}
+
+/* =================== Botões Gerais =================== */
+button {
+  background-color: #f7931e;
+  color: white;
+  border: none;
+  padding: 12px;
+  width: 100%;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+button:hover {
+  background-color: #e67e22;
+}
+
+/* =================== Formulários =================== */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  margin: 10px 0;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #888;
+  background-color: #eaeaea;
+}
+
+/* =================== Containers =================== */
+.form-container {
+  max-width: 900px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  padding: 30px;
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 40px 20px;
+}
+
+/* =================== Cards =================== */
+.card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+.card:hover {
+  transform: translateY(-5px);
+}
+.card h3 {
+  color: #003D7C;
+  margin-bottom: 10px;
+}
+.card p {
+  color: #555;
+  font-size: 14px;
+}
+
+/* =================== Grids =================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+/* =================== Histórico =================== */
+.card-historico {
+  background: #f5f5f5;
+  padding: 15px;
+  border-left: 5px solid #F7931E;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.card-historico strong {
+  color: #003D7C;
+}
+
+/* =================== Mensagens =================== */
+#msg {
+  margin-top: 10px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: bold;
+}
+#msg.green {
+  color: green;
+}
+#msg.red {
+  color: red;
+}
+
+/* =================== Header =================== */
+.header h1 {
+  color: #003D7C;
+  font-size: 28px;
+  font-weight: 700;
+}
+.header p {
+  color: #666;
+  font-size: 16px;
+}
+
+/* =================== Logo =================== */
+.logo {
+  width: 160px;
+  margin-bottom: 20px;
+}
+
+/* =================== Grupos de Botões =================== */
+.button-group {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+/* =================== Área de Histórico =================== */
+.historico-area {
+  margin-top: 30px;
+}

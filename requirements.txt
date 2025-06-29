@@ -1,0 +1,9 @@
+Flask
+Werkzeug
+flask-sqlalchemy
+sqlalchemy
+Flask-CORS
+pdfkit
+weasyprint
+python-dotenv
+psycopg2-binary
