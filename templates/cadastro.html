@@ -295,17 +295,29 @@
             'avaliacao_longo', 'observacoes_gerais', 'proxima_avaliacao'
         ];
 
+        // Verifica se está no modo novo cadastro
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
+
         todosCampos.forEach(campo => {
-            if (editaveis.includes(campo.id)) {
-                campo.readOnly = !editando;
+            if (!studentId) {
+                // Modo novo cadastro: libera tudo
+                campo.readOnly = false;
+                campo.disabled = false;
             } else {
-                campo.readOnly = true;
+                // Modo edição: libera só os campos editáveis
+                if (editaveis.includes(campo.id)) {
+                    campo.readOnly = !editando;
+                } else {
+                    campo.readOnly = true;
+                }
+                campo.disabled = false;
             }
-            campo.disabled = false; // Nunca desativa pra garantir envio
         });
 
-        document.getElementById("laudo_medico").disabled = !editando;
-        document.getElementById("laudo_medico_arquivo").disabled = !editando;
+        // Especificamente para selects e arquivos
+        document.getElementById("laudo_medico").disabled = !editando && !!studentId;
+        document.getElementById("laudo_medico_arquivo").disabled = !editando && !!studentId;
     }
 
     function editarCampos() {
@@ -317,7 +329,6 @@
     async function handleSubmit(event) {
         event.preventDefault();
 
-        // Validação mínima
         const nome = document.getElementById("nome").value.trim();
         if (!nome) {
             msgEl.className = "red";
@@ -399,7 +410,7 @@
         const studentId = urlParams.get('id');
 
         if (!studentId) {
-            bloquearCampos(true); // Libera edição no modo novo cadastro
+            bloquearCampos(true); // Libera tudo no modo novo cadastro
             msgEl.innerText = "Você está criando um novo aluno.";
             msgEl.style.color = "green";
             return;
