@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscar Aluno - Sistema PEI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fa; 
+            margin: 0;
+            padding: 0;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        h2 {
+            color: #003D7C;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .card-historico {
+            background: #fef8ec;
+            border-left: 5px solid #F7931E;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .card-historico:hover {
+            background-color: #f2f2f2;
+        }
+
+        #msg {
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #msg.red {
+            color: red;
+        }
+
+        #msg.green {
+            color: green;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-editar,
+        .btn-historico {
+            background-color: #003D7C;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn-editar:hover,
+        .btn-historico:hover {
+            background-color: #002a54;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Buscar Aluno</h2>
+    <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+    <button onclick="buscarAluno()">Buscar</button>
+    <p id="msg"></p>
+    <div class="resultados" id="resultados"></div>
+</div>
+
+<script>
+    async function buscarAluno() {
+        const studentName = document.getElementById('studentName').value.trim();
+        const resultadosDiv = document.getElementById('resultados');
+        const msgEl = document.getElementById('msg');
+
+        if (!studentName) {
+            msgEl.innerText = "⚠️ Digite um nome válido.";
+            msgEl.className = 'red';
+            resultadosDiv.innerHTML = '';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
+            const alunos = await res.json();
+
+            if (!alunos.length) {
+                msgEl.innerText = "❌ Nenhum aluno encontrado.";
+                msgEl.className = 'red';
+                resultadosDiv.innerHTML = '';
+                return;
+            }
+
+            msgEl.innerText = `${alunos.length} aluno(s) encontrado(s)`;
+            msgEl.className = 'green';
+            resultadosDiv.innerHTML = '';
+
+            alunos.forEach(aluno => {
+                const dataElaboracao = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : 'N/A';
+
+                resultadosDiv.innerHTML += `
+                  <div class="card-historico">
+                    <strong>Nome:</strong> ${aluno.nome}<br>
+                    <strong>Curso:</strong> ${aluno.curso || 'Não informado'}<br>
+                    <strong>Unidade:</strong> ${aluno.unidade || 'Não informada'}<br>
+                    <strong>Data de Elaboração:</strong> ${dataElaboracao}
+                    <div class="button-group">
+                      <button class="btn-editar" onclick="editarAluno(${aluno.id})">✏️ Editar</button>
+                      <button class="btn-historico" onclick="verHistorico(${aluno.id})">📜 Histórico</button>
+                    </div>
+                  </div>`;
+            });
+
+        } catch (err) {
+            console.error("Erro ao buscar aluno:", err);
+            msgEl.innerText = "❌ Erro ao buscar aluno.";
+            msgEl.className = 'red';
+        }
+    }
+
+    function editarAluno(student_id) {
+        location.href = `/cadastro?id=${student_id}`;
+    }
+
+    function verHistorico(student_id) {
+        location.href = `/historico?id=${student_id}`;
+    }
+</script>
+
+</body>
+</html>

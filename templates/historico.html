@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico do PEI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4; 
+            margin: 0;
+            padding: 0;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h2 {
+            color: #003D7C;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #F7931E;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .btn-ver {
+            background-color: #003D7C;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-ver:hover {
+            background-color: #002a54;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Histórico de Alterações do PEI</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID da Edição</th>
+                <th>Data da Edição</th>
+                <th>Editado Por</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="historico-body">
+            <tr><td colspan="4">Carregando histórico...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    window.onload = () => carregarHistorico();
+
+    async function carregarHistorico() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
+        const historicoBody = document.getElementById("historico-body");
+        historicoBody.innerHTML = "<tr><td colspan='4'>Carregando histórico...</td></tr>";
+
+        if (!studentId) {
+            historicoBody.innerHTML = "<tr><td colspan='4'>⚠️ ID do aluno ausente.</td></tr>";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/pei/historico/${studentId}`);
+            const historico = await res.json();
+
+            if (!Array.isArray(historico) || !historico.length) {
+                historicoBody.innerHTML = "<tr><td colspan='4'>Nenhuma alteração registrada.</td></tr>";
+                return;
+            }
+
+            historicoBody.innerHTML = "";
+
+            historico.forEach(h => {
+                const d = new Date(h.data_edicao);
+                const dataFormatada = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()} às ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}hs`;
+
+                historicoBody.innerHTML += `
+                    <tr>
+                        <td>${h.historico_id}</td>
+                        <td>${dataFormatada}</td>
+                        <td>${h.usuario}</td>
+                        <td>
+                            <button class="btn-ver" onclick="abrirVersao(${h.historico_id})">🔍 Ver Versão</button>
+                        </td>
+                    </tr>`;
+            });
+
+        } catch (err) {
+            historicoBody.innerHTML = "<tr><td colspan='4'>❌ Erro ao carregar histórico.</td></tr>";
+            console.error("Erro no histórico:", err);
+        }
+    }
+
+    function abrirVersao(history_id) {
+        window.location.href = `/preview_versao?history_id=${history_id}`;
+    }
+</script>
+
+</body>
+</html>

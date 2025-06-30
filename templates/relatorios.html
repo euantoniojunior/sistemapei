@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório de Alunos Cadastrados</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .form-container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h2 {
+      color: #003D7C; 
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:hover {
+      background-color: #eaeaea;
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .btn-voltar {
+      background-color: #003D7C;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: auto;
+      min-width: 180px;
+    }
+    .btn-voltar:hover {
+      background-color: #002a54;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h2>Relatório de Alunos Cadastrados</h2>
+
+    <input type="text" id="studentName" placeholder="Digite o nome do aluno">
+    <button onclick="buscarAlunos()">Buscar</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Curso</th>
+          <th>Unidade</th>
+          <th>Data de Elaboração</th>
+          <th>Próxima Avaliação</th>
+        </tr>
+      </thead>
+      <tbody id="lista-alunos">
+        <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Botão Voltar -->
+    <div class="button-group">
+      <a href="/dashboard" style="text-decoration: none;">
+        <button class="btn-voltar">← Voltar ao Dashboard</button>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    async function buscarAlunos() {
+      const studentName = document.getElementById("studentName").value.trim();
+      const tbody = document.querySelector("#lista-alunos");
+
+      if (!studentName) {
+        tbody.innerHTML = "<tr><td colspan='6'>Por favor, digite um nome.</td></tr>";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/alunos?nome=${encodeURIComponent(studentName)}`);
+        const alunos = await res.json();
+
+        if (!alunos.length) {
+          tbody.innerHTML = "<tr><td colspan='6'>Nenhum aluno encontrado.</td></tr>";
+          return;
+        }
+
+        tbody.innerHTML = '';
+        alunos.forEach(a => {
+          const dataElaboracao = a.data_elaboracao ? new Date(a.data_elaboracao).toLocaleDateString() : 'N/A';
+          const proximaAvaliacao = a.proxima_avaliacao ? new Date(a.proxima_avaliacao).toLocaleDateString() : 'N/A';
+
+          tbody.innerHTML += `
+            <tr>
+              <td>${a.id}</td>
+              <td>${a.nome}</td>
+              <td>${a.curso || 'Não informado'}</td>
+              <td>${a.unidade || 'Não informada'}</td>
+              <td>${dataElaboracao}</td>
+              <td>${proximaAvaliacao}</td>
+            </tr>`;
+        });
+      } catch (err) {
+        console.error("Erro ao carregar relatório:", err);
+        tbody.innerHTML = "<tr><td colspan='6'>❌ Erro ao carregar dados.</td></tr>";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Versão do PEI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4; 
+            margin: 0;
+            padding: 0;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h2 {
+            color: #003D7C;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .dados {
+            margin-bottom: 20px;
+        }
+
+        .dados strong {
+            display: inline-block;
+            min-width: 140px;
+            margin-bottom: 10px;
+        }
+
+        .metas {
+            margin-top: 30px;
+        }
+
+        .metas h3 {
+            color: #003D7C;
+        }
+
+        .metas table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .metas th, .metas td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .assinatura {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            font-size: 14px;
+        }
+
+        .assinatura div {
+            text-align: center;
+        }
+
+        .assinatura div::after {
+            content: "";
+            display: block;
+            margin: 10px auto;
+            width: 200px;
+            height: 1px;
+            background-color: #333;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .btn-voltar {
+            background-color: #003D7C;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-voltar:hover {
+            background-color: #002a54;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Visualizar Versão do PEI</h2>
+
+    <!-- Dados do Aluno -->
+    <div class="dados">
+        <h3>Dados do Aluno</h3>
+        <p><strong>ID:</strong> <span id="aluno-id"></span></p>
+        <p><strong>Nome:</strong> <span id="aluno-nome"></span></p>
+        <p><strong>Curso:</strong> <span id="aluno-curso"></span></p>
+        <p><strong>Unidade:</strong> <span id="aluno-unidade"></span></p>
+        <p><strong>Período Letivo:</strong> <span id="aluno-periodo"></span></p>
+        <p><strong>Data de Elaboração:</strong> <span id="aluno-data_elaboracao"></span></p>
+        <p><strong>Responsável:</strong> <span id="aluno-responsavel"></span></p>
+        <p><strong>Data de Nascimento:</strong> <span id="aluno-data_nascimento"></span></p>
+        <p><strong>Idade:</strong> <span id="aluno-idade"></span></p>
+        <p><strong>Diagnóstico CID:</strong> <span id="aluno-diagnostico_cid"></span></p>
+        <p><strong>Transtorno Identificado:</strong> <span id="aluno-transtorno_identificado"></span></p>
+        <p><strong>Laudo Médico:</strong> <span id="aluno-laudo_medico"></span></p>
+        <p><strong>Psicólogo:</strong> <span id="aluno-psicologo"></span></p>
+        <p><strong>Psiquiatra:</strong> <span id="aluno-psiquiatra"></span></p>
+        <p><strong>Psicopedagogo:</strong> <span id="aluno-psicopedagogo"></span></p>
+        <p><strong>Outros Profissionais:</strong> <span id="aluno-outros_profissionais"></span></p>
+        <p><strong>Responsável Legal:</strong> <span id="aluno-responsavel_legal"></span></p>
+        <p><strong>Orientador Responsável:</strong> <span id="aluno-orientador_responsavel"></span></p>
+        <p><strong>Supervisor:</strong> <span id="aluno-supervisor"></span></p>
+        <p><strong>Gerente da Unidade:</strong> <span id="aluno-gerente_unidade"></span></p>
+    </div>
+
+    <!-- Conteúdo do PEI -->
+    <div class="dados">
+        <h3>Conteúdo do PEI</h3>
+        <p><strong>Objetivos Gerais:</strong> <span id="conteudo-objetivos_gerais"></span></p>
+        <p><strong>Adaptações Pedagógicas:</strong> <span id="conteudo-adaptaçoes_pedagogicas"></span></p>
+        <p><strong>Intervenções Complementares:</strong> <span id="conteudo-intervencoes_complementares"></span></p>
+
+        <div class="metas">
+            <h3>Metas Individuais</h3>
+            <table>
+                <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
+                <tr>
+                    <td>Curto prazo</td>
+                    <td><span id="curto-meta"></span></td>
+                    <td><span id="curto-responsavel"></span></td>
+                    <td><span id="curto-avaliacao"></span></td>
+                </tr>
+                <tr>
+                    <td>Médio prazo</td>
+                    <td><span id="medio-meta"></span></td>
+                    <td><span id="medio-responsavel"></span></td>
+                    <td><span id="medio-avaliacao"></span></td>
+                </tr>
+                <tr>
+                    <td>Longo prazo</td>
+                    <td><span id="longo-meta"></span></td>
+                    <td><span id="longo-responsavel"></span></td>
+                    <td><span id="longo-avaliacao"></span></td>
+                </tr>
+            </table>
+        </div>
+
+        <p><strong>Perfil do Aluno:</strong> <span id="conteudo-perfil_aluno"></span></p>
+        <p><strong>Observações Gerais:</strong> <span id="conteudo-observacoes_gerais"></span></p>
+        <p><strong>Próxima Avaliação:</strong> <span id="aluno-proxima_avaliacao"></span></p>
+    </div>
+
+    <!-- Assinaturas -->
+    <div class="assinatura">
+        <div>
+            <strong>Responsável Legal</strong><br>
+            __________________________<br>
+            <span id="aluno-responsavel_legal"></span>
+        </div>
+        <div>
+            <strong>Orientador Responsável</strong><br>
+            __________________________<br>
+            <span id="aluno-orientador_responsavel"></span>
+        </div>
+        <div>
+            <strong>Supervisor</strong><br>
+            __________________________<br>
+            <span id="aluno-supervisor"></span>
+        </div>
+        <div>
+            <strong>Gerente da Unidade</strong><br>
+            __________________________<br>
+            <span id="aluno-gerente_unidade"></span>
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="actions">
+        <button class="btn-voltar" onclick="location.href='/dashboard'">← Voltar</button>
+    </div>
+</div>
+
+<script>
+    window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const history_id = urlParams.get('history_id');
+
+        if (!history_id) {
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top: 40px;'>⚠️ ID de histórico ausente.</h2>";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/pei/historico/versao/${history_id}`);
+            const data = await res.json();
+
+            if (!res.ok || !data.aluno || !data.conteudo) {
+                throw new Error(data.error || "Dados inválidos");
+            }
+
+            const aluno = data.aluno;
+            const conteudo = data.conteudo;
+
+            // Preenche dados do aluno
+            document.getElementById("aluno-id").textContent = aluno.id;
+            document.getElementById("aluno-nome").textContent = aluno.nome;
+            document.getElementById("aluno-curso").textContent = aluno.curso;
+            document.getElementById("aluno-unidade").textContent = aluno.unidade;
+            document.getElementById("aluno-periodo").textContent = aluno.periodo;
+            document.getElementById("aluno-data_elaboracao").textContent = formatarData(aluno.data_elaboracao);
+            document.getElementById("aluno-responsavel").textContent = aluno.responsavel;
+            document.getElementById("aluno-data_nascimento").textContent = formatarData(aluno.data_nascimento);
+            document.getElementById("aluno-idade").textContent = aluno.idade;
+            document.getElementById("aluno-diagnostico_cid").textContent = aluno.diagnostico_cid;
+            document.getElementById("aluno-transtorno_identificado").textContent = aluno.transtorno_identificado;
+            document.getElementById("aluno-laudo_medico").textContent = aluno.laudo_medico;
+            document.getElementById("aluno-psicologo").textContent = aluno.psicologo;
+            document.getElementById("aluno-psiquiatra").textContent = aluno.psiquiatra;
+            document.getElementById("aluno-psicopedagogo").textContent = aluno.psicopedagogo;
+            document.getElementById("aluno-outros_profissionais").textContent = aluno.outros_profissionais;
+            document.getElementById("aluno-responsavel_legal").textContent = aluno.responsavel_legal;
+            document.getElementById("aluno-orientador_responsavel").textContent = aluno.orientador_responsavel;
+            document.getElementById("aluno-supervisor").textContent = aluno.supervisor;
+            document.getElementById("aluno-gerente_unidade").textContent = aluno.gerente_unidade;
+
+            // Preenche conteúdo do PEI
+            document.getElementById("conteudo-objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
+            document.getElementById("conteudo-adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
+            document.getElementById("conteudo-intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
+            document.getElementById("conteudo-perfil_aluno").textContent = conteudo.perfil_aluno || "N/A";
+            document.getElementById("conteudo-observacoes_gerais").textContent = conteudo.observacoes_gerais || "N/A";
+
+            // Metas
+            document.getElementById("curto-meta").textContent = conteudo.metas?.curto_prazo?.meta || "N/A";
+            document.getElementById("curto-responsavel").textContent = conteudo.metas?.curto_prazo?.responsavel || "N/A";
+            document.getElementById("curto-avaliacao").textContent = conteudo.metas?.curto_prazo?.avaliacao || "N/A";
+
+            document.getElementById("medio-meta").textContent = conteudo.metas?.medio_prazo?.meta || "N/A";
+            document.getElementById("medio-responsavel").textContent = conteudo.metas?.medio_prazo?.responsavel || "N/A";
+            document.getElementById("medio-avaliacao").textContent = conteudo.metas?.medio_prazo?.avaliacao || "N/A";
+
+            document.getElementById("longo-meta").textContent = conteudo.metas?.longo_prazo?.meta || "N/A";
+            document.getElementById("longo-responsavel").textContent = conteudo.metas?.longo_prazo?.responsavel || "N/A";
+            document.getElementById("longo-avaliacao").textContent = conteudo.metas?.longo_prazo?.avaliacao || "N/A";
+
+            document.getElementById("aluno-proxima_avaliacao").textContent = formatarData(conteudo.proxima_avaliacao);
+
+        } catch (err) {
+            document.body.innerHTML = `<h2 style="color:red;">❌ Erro ao carregar versão: ${err.message}</h2>`;
+        }
+    };
+
+    function formatarData(dataStr) {
+        if (!dataStr || dataStr === "N/A") return "N/A";
+        try {
+            const d = new Date(dataStr.split("T")[0]);
+            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        } catch {
+            return "Inválida";
+        }
+    }
+</script>
+
+</body>
+</html>
