@@ -100,7 +100,7 @@
     <!-- Campo oculto -->
     <input type="hidden" id="student_id" name="student_id">
 
-    <!-- Dados Pessoais (Somente Leitura) -->
+    <!-- Dados Pessoais -->
     <label for="nome">Nome do Aluno:</label>
     <input type="text" name="nome" id="nome" required readonly>
 
@@ -284,6 +284,36 @@
 <script>
     const msgEl = document.getElementById('msg');
 
+    function bloquearCampos(editando = false) {
+        const todosCampos = document.querySelectorAll(`input, textarea`);
+        const editaveis = [
+            'psicologo', 'psiquiatra', 'psicopedagogo', 'outros_profissionais',
+            'perfil_aluno', 'objetivos_gerais', 'adaptaçoes_pedagogicas',
+            'intervencoes_complementares', 'meta_curto_prazo', 'responsavel_curto',
+            'avaliacao_curto', 'meta_medio_prazo', 'responsavel_medio',
+            'avaliacao_medio', 'meta_longo_prazo', 'responsavel_longo',
+            'avaliacao_longo', 'observacoes_gerais', 'proxima_avaliacao'
+        ];
+
+        todosCampos.forEach(campo => {
+            if (editaveis.includes(campo.id)) {
+                campo.readOnly = !editando;
+            } else {
+                campo.readOnly = true;
+            }
+            campo.disabled = false; // Nunca desativa pra garantir envio
+        });
+
+        document.getElementById("laudo_medico").disabled = !editando;
+        document.getElementById("laudo_medico_arquivo").disabled = !editando;
+    }
+
+    function editarCampos() {
+        bloquearCampos(true);
+        msgEl.innerText = "Você está editando o cadastro.";
+        msgEl.style.color = "green";
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -295,9 +325,8 @@
             return;
         }
 
-        // Coleta dados do aluno
         const alunoData = {
-            student_id: document.getElementById("student_id")?.value || "",
+            student_id: document.getElementById("student_id").value || "",
             nome: nome,
             curso: document.getElementById("curso").value.trim(),
             unidade: document.getElementById("unidade").value.trim(),
@@ -322,7 +351,6 @@
             gerente_unidade: document.getElementById("gerente_unidade").value
         };
 
-        // Conteúdo do PEI
         const conteudoData = {
             objetivos_gerais: document.getElementById("objetivos_gerais").value,
             adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
@@ -366,40 +394,12 @@
         }
     }
 
-    function bloquearCampos(editando = false) {
-        const todosCampos = document.querySelectorAll(`input, textarea`);
-        const editaveis = [
-            'psicologo', 'psiquiatra', 'psicopedagogo', 'outros_profissionais',
-            'perfil_aluno', 'objetivos_gerais', 'adaptaçoes_pedagogicas',
-            'intervencoes_complementares', 'meta_curto_prazo', 'responsavel_curto',
-            'avaliacao_curto', 'meta_medio_prazo', 'responsavel_medio',
-            'avaliacao_medio', 'meta_longo_prazo', 'responsavel_longo',
-            'avaliacao_longo', 'observacoes_gerais', 'proxima_avaliacao'
-        ];
-        todosCampos.forEach(campo => {
-            if (editaveis.includes(campo.id)) {
-                campo.readOnly = !editando;
-            } else {
-                campo.readOnly = true;
-            }
-            campo.disabled = false; // Garante que sempre sejam submetidos
-        });
-
-        document.getElementById("laudo_medico").disabled = !editando;
-        document.getElementById("laudo_medico_arquivo").disabled = !editando;
-    }
-
-    function editarCampos() {
-        bloquearCampos(true);
-        msgEl.innerText = "Você está editando o cadastro.";
-        msgEl.style.color = "green";
-    }
-
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const studentId = urlParams.get('id');
+
         if (!studentId) {
-            bloquearCampos(true); // Libera edição imediatamente no modo novo cadastro
+            bloquearCampos(true); // Libera edição no modo novo cadastro
             msgEl.innerText = "Você está criando um novo aluno.";
             msgEl.style.color = "green";
             return;
@@ -412,8 +412,8 @@
                 alert("❌ Erro ao carregar dados do aluno.");
                 return;
             }
+
             const aluno = data.aluno;
-            const conteudo = data.conteudo;
 
             document.getElementById("student_id").value = aluno.id;
             document.getElementById("nome").value = aluno.nome || "";
@@ -439,24 +439,27 @@
             document.getElementById("supervisor").value = aluno.supervisor || "";
             document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
 
-            if (conteudo.objetivos_gerais) document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais;
-            if (conteudo.adaptaçoes_pedagogicas) document.getElementById("adaptaçoes_pedagogicas").value = conteudo.adaptaçoes_pedagogicas;
-            if (conteudo.intervencoes_complementares) document.getElementById("intervencoes_complementares").value = conteudo.intervencoes_complementares;
+            const conteudo = data.conteudo || {};
 
-            if (conteudo.metas?.curto_prazo?.meta) document.getElementById("meta_curto_prazo").value = conteudo.metas.curto_prazo.meta;
-            if (conteudo.metas?.curto_prazo?.responsavel) document.getElementById("responsavel_curto").value = conteudo.metas.curto_prazo.responsavel;
-            if (conteudo.metas?.curto_prazo?.avaliacao) document.getElementById("avaliacao_curto").value = conteudo.metas.curto_prazo.avaliacao;
+            document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais || "";
+            document.getElementById("adaptaçoes_pedagogicas").value = (conteudo.adaptaçoes_pedagogicas || "");
+            document.getElementById("intervencoes_complementares").value = (conteudo.intervencoes_complementares || "");
 
-            if (conteudo.metas?.medio_prazo?.meta) document.getElementById("meta_medio_prazo").value = conteudo.metas.medio_prazo.meta;
-            if (conteudo.metas?.medio_prazo?.responsavel) document.getElementById("responsavel_medio").value = conteudo.metas.medio_prazo.responsavel;
-            if (conteudo.metas?.medio_prazo?.avaliacao) document.getElementById("avaliacao_medio").value = conteudo.metas.medio_prazo.avaliacao;
+            document.getElementById("meta_curto_prazo").value = (conteudo.metas?.curto_prazo?.meta || "");
+            document.getElementById("responsavel_curto").value = (conteudo.metas?.curto_prazo?.responsavel || "");
+            document.getElementById("avaliacao_curto").value = (conteudo.metas?.curto_prazo?.avaliacao || "");
 
-            if (conteudo.metas?.longo_prazo?.meta) document.getElementById("meta_longo_prazo").value = conteudo.metas.longo_prazo.meta;
-            if (conteudo.metas?.longo_prazo?.responsavel) document.getElementById("responsavel_longo").value = conteudo.metas.longo_prazo.responsavel;
-            if (conteudo.metas?.longo_prazo?.avaliacao) document.getElementById("avaliacao_longo").value = conteudo.metas.longo_prazo.avaliacao;
+            document.getElementById("meta_medio_prazo").value = (conteudo.metas?.medio_prazo?.meta || "");
+            document.getElementById("responsavel_medio").value = (conteudo.metas?.medio_prazo?.responsavel || "");
+            document.getElementById("avaliacao_medio").value = (conteudo.metas?.medio_prazo?.avaliacao || "");
+
+            document.getElementById("meta_longo_prazo").value = (conteudo.metas?.longo_prazo?.meta || "");
+            document.getElementById("responsavel_longo").value = (conteudo.metas?.longo_prazo?.responsavel || "");
+            document.getElementById("avaliacao_longo").value = (conteudo.metas?.longo_prazo?.avaliacao || "");
+
         } catch (err) {
             console.error("Erro ao carregar aluno:", err);
-            msgEl.style.color = "red";
+            msgEl.className = "red";
             msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
         }
     };
