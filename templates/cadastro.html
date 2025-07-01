@@ -285,6 +285,8 @@
     const msgEl = document.getElementById('msg');
 
     function bloquearCampos(editando = false) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
         const todosCampos = document.querySelectorAll(`input, textarea`);
         const editaveis = [
             'psicologo', 'psiquiatra', 'psicopedagogo', 'outros_profissionais',
@@ -295,17 +297,12 @@
             'avaliacao_longo', 'observacoes_gerais', 'proxima_avaliacao'
         ];
 
-        // Verifica se está no modo novo cadastro
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = urlParams.get('id');
-
         todosCampos.forEach(campo => {
             if (!studentId) {
                 // Modo novo cadastro: libera tudo
                 campo.readOnly = false;
                 campo.disabled = false;
             } else {
-                // Modo edição: libera só os campos editáveis
                 if (editaveis.includes(campo.id)) {
                     campo.readOnly = !editando;
                 } else {
@@ -315,7 +312,6 @@
             }
         });
 
-        // Especificamente para selects e arquivos
         document.getElementById("laudo_medico").disabled = !editando && !!studentId;
         document.getElementById("laudo_medico_arquivo").disabled = !editando && !!studentId;
     }
@@ -323,92 +319,156 @@
     function editarCampos() {
         bloquearCampos(true);
         msgEl.innerText = "Você está editando o cadastro.";
-        msgEl.style.color = "green";
+        msgEl.className = "green";
     }
 
     async function handleSubmit(event) {
-    event.preventDefault();
+        event.preventDefault();
 
-    const nome = document.getElementById("nome").value.trim();
-    if (!nome) {
-        msgEl.className = "red";
-        msgEl.innerText = "❌ Nome do aluno é obrigatório.";
-        return;
-    }
+        const nome = document.getElementById("nome").value.trim();
+        if (!nome) {
+            msgEl.className = "red";
+            msgEl.innerText = "❌ Nome do aluno é obrigatório.";
+            return;
+        }
 
-    // Garanta que datas estejam no formato correto
-    const data_elaboracao = document.getElementById("data_elaboracao").value || null;
-    const data_nascimento = document.getElementById("data_nascimento").value || null;
-    const proxima_avaliacao = document.getElementById("proxima_avaliacao").value || null;
+        const alunoData = {
+            student_id: document.getElementById("student_id").value || "",
+            nome,
+            curso: document.getElementById("curso").value.trim(),
+            unidade: document.getElementById("unidade").value.trim(),
+            periodo: document.getElementById("periodo").value.trim(),
+            data_elaboracao: document.getElementById("data_elaboracao").value,
+            responsavel: document.getElementById("responsavel").value.trim(),
+            data_nascimento: document.getElementById("data_nascimento").value,
+            idade: document.getElementById("idade").value,
+            diagnostico_cid: document.getElementById("diagnostico_cid").value,
+            transtorno_identificado: document.getElementById("transtorno_identificado").value,
+            laudo_medico: document.getElementById("laudo_medico").value,
+            psicologo: document.getElementById("psicologo").value,
+            psiquiatra: document.getElementById("psiquiatra").value,
+            psicopedagogo: document.getElementById("psicopedagogo").value,
+            outros_profissionais: document.getElementById("outros_profissionais").value,
+            perfil_aluno: document.getElementById("perfil_aluno").value,
+            observacoes_gerais: document.getElementById("observacoes_gerais").value,
+            proxima_avaliacao: document.getElementById("proxima_avaliacao").value,
+            responsavel_legal: document.getElementById("responsavel_legal").value,
+            orientador_responsavel: document.getElementById("orientador_responsavel").value,
+            supervisor: document.getElementById("supervisor").value,
+            gerente_unidade: document.getElementById("gerente_unidade").value
+        };
 
-    const alunoData = {
-        student_id: document.getElementById("student_id")?.value || "",
-        nome,
-        curso: document.getElementById("curso").value.trim(),
-        unidade: document.getElementById("unidade").value.trim(),
-        periodo: document.getElementById("periodo").value.trim(),
-        data_elaboracao,
-        responsavel: document.getElementById("responsavel").value.trim(),
-        data_nascimento,
-        idade: document.getElementById("idade").value,
-        diagnostico_cid: document.getElementById("diagnostico_cid").value,
-        transtorno_identificado: document.getElementById("transtorno_identificado").value,
-        laudo_medico: document.getElementById("laudo_medico").value,
-        psicologo: document.getElementById("psicologo").value,
-        psiquiatra: document.getElementById("psiquiatra").value,
-        psicopedagogo: document.getElementById("psicopedagogo").value,
-        outros_profissionais: document.getElementById("outros_profissionais").value,
-        perfil_aluno: document.getElementById("perfil_aluno").value,
-        observacoes_gerais: document.getElementById("observacoes_gerais").value,
-        proxima_avaliacao,
-        responsavel_legal: document.getElementById("responsavel_legal").value,
-        orientador_responsavel: document.getElementById("orientador_responsavel").value,
-        supervisor: document.getElementById("supervisor").value,
-        gerente_unidade: document.getElementById("gerente_unidade").value
-    };
-
-    const conteudoData = {
-        objetivos_gerais: document.getElementById("objetivos_gerais").value,
-        adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
-        intervencoes_complementares: document.getElementById("intervencoes_complementares").value,
-        metas: {
-            curto_prazo: {
-                meta: document.getElementById("meta_curto_prazo").value,
-                responsavel: document.getElementById("responsavel_curto").value,
-                avaliacao: document.getElementById("avaliacao_curto").value
-            },
-            medio_prazo: {
-                meta: document.getElementById("meta_medio_prazo").value,
-                responsavel: document.getElementById("responsavel_medio").value,
-                avaliacao: document.getElementById("avaliacao_medio").value
-            },
-            longo_prazo: {
-                meta: document.getElementById("meta_longo_prazo").value,
-                responsavel: document.getElementById("responsavel_longo").value,
-                avaliacao: document.getElementById("avaliacao_longo").value
+        const conteudoData = {
+            objetivos_gerais: document.getElementById("objetivos_gerais").value,
+            adaptaçoes_pedagogicas: document.getElementById("adaptaçoes_pedagogicas").value,
+            intervencoes_complementares: document.getElementById("intervencoes_complementares").value,
+            metas: {
+                curto_prazo: {
+                    meta: document.getElementById("meta_curto_prazo").value,
+                    responsavel: document.getElementById("responsavel_curto").value,
+                    avaliacao: document.getElementById("avaliacao_curto").value
+                },
+                medio_prazo: {
+                    meta: document.getElementById("meta_medio_prazo").value,
+                    responsavel: document.getElementById("responsavel_medio").value,
+                    avaliacao: document.getElementById("avaliacao_medio").value
+                },
+                longo_prazo: {
+                    meta: document.getElementById("meta_longo_prazo").value,
+                    responsavel: document.getElementById("responsavel_longo").value,
+                    avaliacao: document.getElementById("avaliacao_longo").value
+                }
             }
-        }
-    };
+        };
 
-    try {
-        const res = await fetch("/api/pei", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            msgEl.className = "green";
-            msgEl.innerText = data.message || "✅ Cadastro salvo!";
-        } else {
-            throw new Error(data.error || "Erro ao salvar");
+        try {
+            const res = await fetch("/api/pei", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                msgEl.className = "green";
+                msgEl.innerText = data.message || "✅ Cadastro salvo!";
+            } else {
+                throw new Error(data.error || "Erro ao salvar");
+            }
+        } catch (err) {
+            console.error("Erro ao salvar:", err);
+            msgEl.className = "red";
+            msgEl.innerText = "❌ Erro ao salvar: " + err.message;
         }
-    } catch (err) {
-        console.error("Erro ao salvar:", err); // Verifique aqui no console do navegador
-        msgEl.className = "red";
-        msgEl.innerText = "❌ Erro ao salvar: " + err.message;
     }
-}
+
+    window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
+
+        if (!studentId) {
+            bloquearCampos(true); // Libera tudo no modo novo cadastro
+            msgEl.innerText = "Você está criando um novo aluno.";
+            msgEl.style.color = "green";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/alunos/${studentId}`);
+            const data = await res.json();
+            if (!data.aluno) {
+                alert("❌ Erro ao carregar dados do aluno.");
+                return;
+            }
+
+            const aluno = data.aluno;
+
+            document.getElementById("student_id").value = aluno.id;
+            document.getElementById("nome").value = aluno.nome || "";
+            document.getElementById("curso").value = aluno.curso || "";
+            document.getElementById("unidade").value = aluno.unidade || "";
+            document.getElementById("periodo").value = aluno.periodo || "";
+            document.getElementById("data_elaboracao").value = aluno.data_elaboracao ? aluno.data_elaboracao.split("T")[0] : "";
+            document.getElementById("responsavel").value = aluno.responsavel || "";
+            document.getElementById("data_nascimento").value = aluno.data_nascimento ? aluno.data_nascimento.split("T")[0] : "";
+            document.getElementById("idade").value = aluno.idade || "";
+            document.getElementById("diagnostico_cid").value = aluno.diagnostico_cid || "";
+            document.getElementById("transtorno_identificado").value = aluno.transtorno_identificado || "";
+            document.getElementById("laudo_medico").value = aluno.laudo_medico || "";
+            document.getElementById("psicologo").value = aluno.psicologo || "";
+            document.getElementById("psiquiatra").value = aluno.psiquiatra || "";
+            document.getElementById("psicopedagogo").value = aluno.psicopedagogo || "";
+            document.getElementById("outros_profissionais").value = aluno.outros_profissionais || "";
+            document.getElementById("perfil_aluno").value = aluno.perfil_aluno || "";
+            document.getElementById("observacoes_gerais").value = aluno.observacoes_gerais || "";
+            document.getElementById("proxima_avaliacao").value = aluno.proxima_avaliacao ? aluno.proxima_avaliacao.split("T")[0] : "";
+            document.getElementById("responsavel_legal").value = aluno.responsavel_legal || "";
+            document.getElementById("orientador_responsavel").value = aluno.orientador_responsavel || "";
+            document.getElementById("supervisor").value = aluno.supervisor || "";
+            document.getElementById("gerente_unidade").value = aluno.gerente_unidade || "";
+
+            const conteudo = data.conteudo || {};
+
+            document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais || "";
+            document.getElementById("adaptaçoes_pedagogicas").value = (conteudo.adaptaçoes_pedagogicas || "");
+            document.getElementById("intervencoes_complementares").value = (conteudo.intervencoes_complementares || "");
+
+            document.getElementById("meta_curto_prazo").value = (conteudo.metas?.curto_prazo?.meta || "");
+            document.getElementById("responsavel_curto").value = (conteudo.metas?.curto_prazo?.responsavel || "");
+            document.getElementById("avaliacao_curto").value = (conteudo.metas?.curto_prazo?.avaliacao || "");
+
+            document.getElementById("meta_medio_prazo").value = (conteudo.metas?.medio_prazo?.meta || "");
+            document.getElementById("responsavel_medio").value = (conteudo.metas?.medio_prazo?.responsavel || "");
+            document.getElementById("avaliacao_medio").value = (conteudo.metas?.medio_prazo?.avaliacao || "");
+
+            document.getElementById("meta_longo_prazo").value = (conteudo.metas?.longo_prazo?.meta || "");
+            document.getElementById("responsavel_longo").value = (conteudo.metas?.longo_prazo?.responsavel || "");
+            document.getElementById("avaliacao_longo").value = (conteudo.metas?.longo_prazo?.avaliacao || "");
+
+        } catch (err) {
+            console.error("Erro ao carregar aluno:", err);
+            msgEl.className = "red";
+            msgEl.innerText = "❌ Erro ao carregar dados do aluno.";
+        }
     };
 </script>
 </body>
