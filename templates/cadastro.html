@@ -33,7 +33,8 @@
             font-size: 15px;
             resize: vertical;
         }
-        .grid-2, .grid-3 {
+        .grid-2,
+        .grid-3 {
             display: grid;
             gap: 15px;
             margin-top: 20px;
@@ -284,7 +285,10 @@
     const msgEl = document.getElementById('msg');
 
     function bloquearCampos(editando = false) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('id');
         const todosCampos = document.querySelectorAll(`input, textarea`);
+
         const editaveis = [
             'psicologo', 'psiquiatra', 'psicopedagogo', 'outros_profissionais',
             'perfil_aluno', 'objetivos_gerais', 'adaptaçoes_pedagogicas',
@@ -295,14 +299,23 @@
         ];
 
         todosCampos.forEach(campo => {
-            if (editaveis.includes(campo.id)) {
-                campo.readOnly = !editando;
+            if (!studentId) {
+                // Modo novo cadastro: libera todos os campos
+                campo.readOnly = false;
+                campo.disabled = false;
             } else {
-                campo.readOnly = true;
+                // Modo edição: só libera campos editáveis
+                if (editaveis.includes(campo.id)) {
+                    campo.readOnly = !editando;
+                    campo.disabled = false;
+                } else {
+                    campo.readOnly = true;
+                    campo.disabled = false;
+                }
             }
-            campo.disabled = false; // Garante que todos os campos sejam submetidos
         });
 
+        // Somente leitura no modo edição
         document.getElementById("laudo_medico").disabled = !editando;
         document.getElementById("laudo_medico_arquivo").disabled = !editando;
     }
@@ -325,7 +338,7 @@
 
         const alunoData = {
             student_id: document.getElementById("student_id")?.value || "",
-            nome: nome,
+            nome,
             curso: document.getElementById("curso").value.trim(),
             unidade: document.getElementById("unidade").value.trim(),
             periodo: document.getElementById("periodo").value.trim(),
@@ -379,7 +392,6 @@
                 body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
             });
             const data = await res.json();
-
             if (res.ok) {
                 msgEl.className = "green";
                 msgEl.innerText = data.message || "✅ Cadastro salvo!";
@@ -390,12 +402,6 @@
             console.error("Erro ao salvar:", err);
             msgEl.className = "red";
             msgEl.innerText = "❌ Erro ao salvar: " + err.message;
-
-            if (err && err.detalhes && err.detalhes.length > 0) {
-                err.detalhes.forEach(d => {
-                    console.log(`[ERRO DE VALIDAÇÃO] ${d.loc.join('.')}: ${d.msg}`);
-                });
-            }
         }
     }
 
@@ -404,7 +410,7 @@
         const studentId = urlParams.get('id');
 
         if (!studentId) {
-            bloquearCampos(true); // Libera tudo no modo novo cadastro
+            bloquearCampos(true); // Libera tudo no novo cadastro
             msgEl.innerText = "Você está criando um novo aluno.";
             msgEl.style.color = "green";
             return;
@@ -447,20 +453,20 @@
             const conteudo = data.conteudo || {};
 
             document.getElementById("objetivos_gerais").value = conteudo.objetivos_gerais || "";
-            document.getElementById("adaptaçoes_pedagogicas").value = (conteudo.adaptaçoes_pedagogicas || "");
-            document.getElementById("intervencoes_complementares").value = (conteudo.intervencoes_complementares || "");
+            document.getElementById("adaptaçoes_pedagogicas").value = conteudo.adaptaçoes_pedagogicas || "";
+            document.getElementById("intervencoes_complementares").value = conteudo.intervencoes_complementares || "";
 
-            document.getElementById("meta_curto_prazo").value = (conteudo.metas?.curto_prazo?.meta || "");
-            document.getElementById("responsavel_curto").value = (conteudo.metas?.curto_prazo?.responsavel || "");
-            document.getElementById("avaliacao_curto").value = (conteudo.metas?.curto_prazo?.avaliacao || "");
+            document.getElementById("meta_curto_prazo").value = conteudo.metas?.curto_prazo?.meta || "";
+            document.getElementById("responsavel_curto").value = conteudo.metas?.curto_prazo?.responsavel || "";
+            document.getElementById("avaliacao_curto").value = conteudo.metas?.curto_prazo?.avaliacao || "";
 
-            document.getElementById("meta_medio_prazo").value = (conteudo.metas?.medio_prazo?.meta || "");
-            document.getElementById("responsavel_medio").value = (conteudo.metas?.medio_prazo?.responsavel || "");
-            document.getElementById("avaliacao_medio").value = (conteudo.metas?.medio_prazo?.avaliacao || "");
+            document.getElementById("meta_medio_prazo").value = conteudo.metas?.medio_prazo?.meta || "";
+            document.getElementById("responsavel_medio").value = conteudo.metas?.medio_prazo?.responsavel || "";
+            document.getElementById("avaliacao_medio").value = conteudo.metas?.medio_prazo?.avaliacao || "";
 
-            document.getElementById("meta_longo_prazo").value = (conteudo.metas?.longo_prazo?.meta || "");
-            document.getElementById("responsavel_longo").value = (conteudo.metas?.longo_prazo?.responsavel || "");
-            document.getElementById("avaliacao_longo").value = (conteudo.metas?.longo_prazo?.avaliacao || "");
+            document.getElementById("meta_longo_prazo").value = conteudo.metas?.longo_prazo?.meta || "";
+            document.getElementById("responsavel_longo").value = conteudo.metas?.longo_prazo?.responsavel || "";
+            document.getElementById("avaliacao_longo").value = conteudo.metas?.longo_prazo?.avaliacao || "";
 
         } catch (err) {
             console.error("Erro ao carregar aluno:", err);
