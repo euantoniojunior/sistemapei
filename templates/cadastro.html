@@ -33,8 +33,7 @@
             font-size: 15px;
             resize: vertical;
         }
-        .grid-2,
-        .grid-3 {
+        .grid-2, .grid-3 {
             display: grid;
             gap: 15px;
             margin-top: 20px;
@@ -169,7 +168,7 @@
                accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" disabled>
     </div>
 
-    <!-- Profissionais (Editáveis após clique em "Editar Dados") -->
+    <!-- Profissionais -->
     <label for="psicologo">Psicólogo:</label>
     <input type="text" name="psicologo" id="psicologo" readonly>
 
@@ -285,8 +284,6 @@
     const msgEl = document.getElementById('msg');
 
     function bloquearCampos(editando = false) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = urlParams.get('id');
         const todosCampos = document.querySelectorAll(`input, textarea`);
         const editaveis = [
             'psicologo', 'psiquiatra', 'psicopedagogo', 'outros_profissionais',
@@ -298,22 +295,16 @@
         ];
 
         todosCampos.forEach(campo => {
-            if (!studentId) {
-                // Modo novo cadastro: libera tudo
-                campo.readOnly = false;
-                campo.disabled = false;
+            if (editaveis.includes(campo.id)) {
+                campo.readOnly = !editando;
             } else {
-                if (editaveis.includes(campo.id)) {
-                    campo.readOnly = !editando;
-                } else {
-                    campo.readOnly = true;
-                }
-                campo.disabled = false;
+                campo.readOnly = true;
             }
+            campo.disabled = false; // Garante que todos os campos sejam submetidos
         });
 
-        document.getElementById("laudo_medico").disabled = !editando && !!studentId;
-        document.getElementById("laudo_medico_arquivo").disabled = !editando && !!studentId;
+        document.getElementById("laudo_medico").disabled = !editando;
+        document.getElementById("laudo_medico_arquivo").disabled = !editando;
     }
 
     function editarCampos() {
@@ -333,8 +324,8 @@
         }
 
         const alunoData = {
-            student_id: document.getElementById("student_id").value || "",
-            nome,
+            student_id: document.getElementById("student_id")?.value || "",
+            nome: nome,
             curso: document.getElementById("curso").value.trim(),
             unidade: document.getElementById("unidade").value.trim(),
             periodo: document.getElementById("periodo").value.trim(),
@@ -388,6 +379,7 @@
                 body: JSON.stringify({ aluno: alunoData, conteudo: conteudoData })
             });
             const data = await res.json();
+
             if (res.ok) {
                 msgEl.className = "green";
                 msgEl.innerText = data.message || "✅ Cadastro salvo!";
@@ -398,6 +390,12 @@
             console.error("Erro ao salvar:", err);
             msgEl.className = "red";
             msgEl.innerText = "❌ Erro ao salvar: " + err.message;
+
+            if (err && err.detalhes && err.detalhes.length > 0) {
+                err.detalhes.forEach(d => {
+                    console.log(`[ERRO DE VALIDAÇÃO] ${d.loc.join('.')}: ${d.msg}`);
+                });
+            }
         }
     }
 
