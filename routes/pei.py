@@ -11,20 +11,21 @@ from io import StringIO
 import openpyxl
 from io import BytesIO
 from pydantic import BaseModel, validator, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Union
+from datetime import date as dt_date
 
 pei_bp = Blueprint('pei', __name__)
 
-# Schema Pydantic para validação
+# Schema Pydantic para validação de dados do aluno
 class AlunoSchema(BaseModel):
-    student_id: Optional[int] = None
+    student_id: Optional[Union[int, str]] = None
     nome: str = Field(..., min_length=1)
     curso: Optional[str] = None
     unidade: Optional[str] = None
     periodo: Optional[str] = None
-    data_elaboracao: Optional[datetime] = None
+    data_elaboracao: Optional[dt_date] = None
     responsavel: Optional[str] = None
-    data_nascimento: Optional[datetime] = None
+    data_nascimento: Optional[dt_date] = None
     idade: Optional[int] = None
     diagnostico_cid: Optional[str] = None
     transtorno_identificado: Optional[str] = None
@@ -35,7 +36,7 @@ class AlunoSchema(BaseModel):
     outros_profissionais: Optional[str] = None
     perfil_aluno: Optional[str] = None
     observacoes_gerais: Optional[str] = None
-    proxima_avaliacao: Optional[datetime] = None
+    proxima_avaliacao: Optional[dt_date] = None
     responsavel_legal: Optional[str] = None
     orientador_responsavel: Optional[str] = None
     supervisor: Optional[str] = None
@@ -44,8 +45,17 @@ class AlunoSchema(BaseModel):
     @validator('nome')
     def validar_nome(cls, v):
         if not v or v.strip() == "":
-            raise ValueError("Campo 'nome' é obrigatório")
+            raise ValueError("Campo 'nome' não pode ser vazio")
         return v.strip()
+
+    @validator('student_id', pre=True)
+    def validar_student_id(cls, v):
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
     @validator('data_elaboracao', 'data_nascimento', 'proxima_avaliacao', pre=True)
     def parse_data(cls, v):
@@ -53,7 +63,7 @@ class AlunoSchema(BaseModel):
             try:
                 return datetime.strptime(v, '%Y-%m-%d').date()
             except ValueError:
-                raise ValueError(f"Data inválida: {v}")
+                return None
         return v
 
     @validator('idade', pre=True)
@@ -63,13 +73,13 @@ class AlunoSchema(BaseModel):
         try:
             return int(v)
         except (ValueError, TypeError):
-            raise ValueError("Idade deve ser um número válido ou vazio")
+            return None
 
 # Rota principal: Salvar ou editar aluno + PEI
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        # Pegar UPLOAD_FOLDER do contexto do app
+        # Pegar UPLOAD_FOLDER do app.config
         UPLOAD_FOLDER = current_app.config['UPLOAD_FOLDER']
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -101,9 +111,8 @@ def criar_pei():
                 "detalhes": ve.errors()
             }), 400
 
-        aluno_data = aluno_validado.dict()
-
-        student_id = aluno_data.get('student_id')
+        aluno_dict = aluno_validado.dict()
+        student_id = aluno_dict.get('student_id')
 
         # Se for edição
         if student_id and str(student_id).isdigit():
@@ -112,54 +121,54 @@ def criar_pei():
                 return jsonify({"error": "Aluno não encontrado"}), 404
 
             # Atualiza campos editáveis
-            aluno.nome = aluno_data.get('nome')
-            aluno.curso = aluno_data.get('curso')
-            aluno.unidade = aluno_data.get('unidade')
-            aluno.periodo = aluno_data.get('periodo')
-            aluno.data_elaboracao = aluno_data.get('data_elaboracao')
-            aluno.responsavel = aluno_data.get('responsavel')
-            aluno.data_nascimento = aluno_data.get('data_nascimento')
-            aluno.idade = aluno_data.get('idade')
-            aluno.diagnostico_cid = aluno_data.get('diagnostico_cid')
-            aluno.transtorno_identificado = aluno_data.get('transtorno_identificado')
-            aluno.laudo_medico = aluno_data.get('laudo_medico')
-            aluno.psicologo = aluno_data.get('psicologo')
-            aluno.psiquiatra = aluno_data.get('psiquiatra')
-            aluno.psicopedagogo = aluno_data.get('psicopedagogo')
-            aluno.outros_profissionais = aluno_data.get('outros_profissionais')
-            aluno.perfil_aluno = aluno_data.get('perfil_aluno')
-            aluno.observacoes_gerais = aluno_data.get('observacoes_gerais')
-            aluno.proxima_avaliacao = aluno_data.get('proxima_avaliacao')
-            aluno.responsavel_legal = aluno_data.get('responsavel_legal')
-            aluno.orientador_responsavel = aluno_data.get('orientador_responsavel')
-            aluno.supervisor = aluno_data.get('supervisor')
-            aluno.gerente_unidade = aluno_data.get('gerente_unidade')
+            aluno.nome = aluno_dict.get('nome')
+            aluno.curso = aluno_dict.get('curso')
+            aluno.unidade = aluno_dict.get('unidade')
+            aluno.periodo = aluno_dict.get('periodo')
+            aluno.data_elaboracao = aluno_dict.get('data_elaboracao')
+            aluno.responsavel = aluno_dict.get('responsavel')
+            aluno.data_nascimento = aluno_dict.get('data_nascimento')
+            aluno.idade = aluno_dict.get('idade')
+            aluno.diagnostico_cid = aluno_dict.get('diagnostico_cid')
+            aluno.transtorno_identificado = aluno_dict.get('transtorno_identificado')
+            aluno.laudo_medico = aluno_dict.get('laudo_medico')
+            aluno.psicologo = aluno_dict.get('psicologo')
+            aluno.psiquiatra = aluno_dict.get('psiquiatra')
+            aluno.psicopedagogo = aluno_dict.get('psicopedagogo')
+            aluno.outros_profissionais = aluno_dict.get('outros_profissionais')
+            aluno.perfil_aluno = aluno_dict.get('perfil_aluno')
+            aluno.observacoes_gerais = aluno_dict.get('observacoes_gerais')
+            aluno.proxima_avaliacao = aluno_dict.get('proxima_avaliacao')
+            aluno.responsavel_legal = aluno_dict.get('responsavel_legal')
+            aluno.orientador_responsavel = aluno_dict.get('orientador_responsavel')
+            aluno.supervisor = aluno_dict.get('supervisor')
+            aluno.gerente_unidade = aluno_dict.get('gerente_unidade')
 
         # Se for novo cadastro
         else:
             aluno = Student(
-                nome=aluno_data.get('nome'),
-                curso=aluno_data.get('curso'),
-                unidade=aluno_data.get('unidade'),
-                periodo=aluno_data.get('periodo'),
-                data_elaboracao=aluno_data.get('data_elaboracao'),
-                responsavel=aluno_data.get('responsavel'),
-                data_nascimento=aluno_data.get('data_nascimento'),
-                idade=aluno_data.get('idade'),
-                diagnostico_cid=aluno_data.get('diagnostico_cid'),
-                transtorno_identificado=aluno_data.get('transtorno_identificado'),
-                laudo_medico=aluno_data.get('laudo_medico'),
-                psicologo=aluno_data.get('psicologo'),
-                psiquiatra=aluno_data.get('psiquiatra'),
-                psicopedagogo=aluno_data.get('psicopedagogo'),
-                outros_profissionais=aluno_data.get('outros_profissionais'),
-                perfil_aluno=aluno_data.get('perfil_aluno'),
-                observacoes_gerais=aluno_data.get('observacoes_gerais'),
-                proxima_avaliacao=aluno_data.get('proxima_avaliacao'),
-                responsavel_legal=aluno_data.get('responsavel_legal'),
-                orientador_responsavel=aluno_data.get('orientador_responsavel'),
-                supervisor=aluno_data.get('supervisor'),
-                gerente_unidade=aluno_data.get('gerente_unidade')
+                nome=aluno_dict.get('nome'),
+                curso=aluno_dict.get('curso'),
+                unidade=aluno_dict.get('unidade'),
+                periodo=aluno_dict.get('periodo'),
+                data_elaboracao=aluno_dict.get('data_elaboracao'),
+                responsavel=aluno_dict.get('responsavel'),
+                data_nascimento=aluno_dict.get('data_nascimento'),
+                idade=aluno_dict.get('idade'),
+                diagnostico_cid=aluno_dict.get('diagnostico_cid'),
+                transtorno_identificado=aluno_dict.get('transtorno_identificado'),
+                laudo_medico=aluno_dict.get('laudo_medico'),
+                psicologo=aluno_dict.get('psicologo'),
+                psiquiatra=aluno_dict.get('psiquiatra'),
+                psicopedagogo=aluno_dict.get('psicopedagogo'),
+                outros_profissionais=aluno_dict.get('outros_profissionais'),
+                perfil_aluno=aluno_dict.get('perfil_aluno'),
+                observacoes_gerais=aluno_dict.get('observacoes_gerais'),
+                proxima_avaliacao=aluno_dict.get('proxima_avaliacao'),
+                responsavel_legal=aluno_dict.get('responsavel_legal'),
+                orientador_responsavel=aluno_dict.get('orientador_responsavel'),
+                supervisor=aluno_dict.get('supervisor'),
+                gerente_unidade=aluno_dict.get('gerente_unidade')
             )
             db.session.add(aluno)
             db.session.flush()
@@ -216,8 +225,8 @@ def buscar_aluno_por_id(student_id):
     if pei:
         try:
             conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
-        except:
-            pass
+        except Exception as e:
+            print(f"[ERRO] Falha ao carregar conteúdo do PEI: {e}")
     aluno_dict.update({
         'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
         'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
