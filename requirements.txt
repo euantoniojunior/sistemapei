@@ -8,3 +8,6 @@ weasyprint
 python-dotenv
 psycopg2-binary
 openpyxl
+pydantic
+gunicorn
+marshmallow
