@@ -10,29 +10,70 @@ import csv
 from io import StringIO
 import openpyxl
 from io import BytesIO
+from pydantic import BaseModel, validator, Field
+from typing import Optional, Dict, Any
 
 pei_bp = Blueprint('pei', __name__)
 
-def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# Schema Pydantic para validação
+class AlunoSchema(BaseModel):
+    student_id: Optional[int] = None
+    nome: str = Field(..., min_length=1)
+    curso: Optional[str] = None
+    unidade: Optional[str] = None
+    periodo: Optional[str] = None
+    data_elaboracao: Optional[datetime] = None
+    responsavel: Optional[str] = None
+    data_nascimento: Optional[datetime] = None
+    idade: Optional[int] = None
+    diagnostico_cid: Optional[str] = None
+    transtorno_identificado: Optional[str] = None
+    laudo_medico: Optional[str] = None
+    psicologo: Optional[str] = None
+    psiquiatra: Optional[str] = None
+    psicopedagogo: Optional[str] = None
+    outros_profissionais: Optional[str] = None
+    perfil_aluno: Optional[str] = None
+    observacoes_gerais: Optional[str] = None
+    proxima_avaliacao: Optional[datetime] = None
+    responsavel_legal: Optional[str] = None
+    orientador_responsavel: Optional[str] = None
+    supervisor: Optional[str] = None
+    gerente_unidade: Optional[str] = None
 
-def parse_date(date_str):
-    if not date_str:
-        return None
-    try:
-        return datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        print(f"[ERRO] Data inválida: {date_str}")
-        return None
+    @validator('nome')
+    def validar_nome(cls, v):
+        if not v or v.strip() == "":
+            raise ValueError("Campo 'nome' é obrigatório")
+        return v.strip()
 
+    @validator('data_elaboracao', 'data_nascimento', 'proxima_avaliacao', pre=True)
+    def parse_data(cls, v):
+        if isinstance(v, str):
+            try:
+                return datetime.strptime(v, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError(f"Data inválida: {v}")
+        return v
+
+    @validator('idade', pre=True)
+    def validar_idade(cls, v):
+        if isinstance(v, str) and v.strip() in ['', ' ', None]:
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            raise ValueError("Idade deve ser um número válido ou vazio")
+
+# Rota principal: Salvar ou editar aluno + PEI
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
         # Pegar UPLOAD_FOLDER do contexto do app
         UPLOAD_FOLDER = current_app.config['UPLOAD_FOLDER']
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Garante que a pasta exista
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+        # Processar dados recebidos
         if request.is_json:
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -51,21 +92,18 @@ def criar_pei():
         if not aluno_data:
             return jsonify({"error": "Dados do aluno ausentes"}), 400
 
-        nome = aluno_data.get('nome', '').strip()
-        if not nome:
-            return jsonify({"error": "Campo 'nome' é obrigatório"}), 400
+        # Validar com Pydantic
+        try:
+            aluno_validado = AlunoSchema(**aluno_data)
+        except Exception as ve:
+            return jsonify({
+                "error": "Validação dos dados falhou",
+                "detalhes": ve.errors()
+            }), 400
+
+        aluno_data = aluno_validado.dict()
 
         student_id = aluno_data.get('student_id')
-
-        idade = aluno_data.get('idade')
-        try:
-            idade = int(idade) if idade and str(idade).strip() != '' else None
-        except (ValueError, TypeError):
-            idade = None
-
-        data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
-        data_nascimento = parse_date(aluno_data.get('data_nascimento'))
-        proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
 
         # Se for edição
         if student_id and str(student_id).isdigit():
@@ -73,15 +111,15 @@ def criar_pei():
             if not aluno:
                 return jsonify({"error": "Aluno não encontrado"}), 404
 
-            # Campos editáveis
-            aluno.nome = nome
+            # Atualiza campos editáveis
+            aluno.nome = aluno_data.get('nome')
             aluno.curso = aluno_data.get('curso')
             aluno.unidade = aluno_data.get('unidade')
             aluno.periodo = aluno_data.get('periodo')
-            aluno.data_elaboracao = data_elaboracao
+            aluno.data_elaboracao = aluno_data.get('data_elaboracao')
             aluno.responsavel = aluno_data.get('responsavel')
-            aluno.data_nascimento = data_nascimento
-            aluno.idade = idade
+            aluno.data_nascimento = aluno_data.get('data_nascimento')
+            aluno.idade = aluno_data.get('idade')
             aluno.diagnostico_cid = aluno_data.get('diagnostico_cid')
             aluno.transtorno_identificado = aluno_data.get('transtorno_identificado')
             aluno.laudo_medico = aluno_data.get('laudo_medico')
@@ -91,7 +129,7 @@ def criar_pei():
             aluno.outros_profissionais = aluno_data.get('outros_profissionais')
             aluno.perfil_aluno = aluno_data.get('perfil_aluno')
             aluno.observacoes_gerais = aluno_data.get('observacoes_gerais')
-            aluno.proxima_avaliacao = proxima_avaliacao
+            aluno.proxima_avaliacao = aluno_data.get('proxima_avaliacao')
             aluno.responsavel_legal = aluno_data.get('responsavel_legal')
             aluno.orientador_responsavel = aluno_data.get('orientador_responsavel')
             aluno.supervisor = aluno_data.get('supervisor')
@@ -100,14 +138,14 @@ def criar_pei():
         # Se for novo cadastro
         else:
             aluno = Student(
-                nome=nome,
+                nome=aluno_data.get('nome'),
                 curso=aluno_data.get('curso'),
                 unidade=aluno_data.get('unidade'),
                 periodo=aluno_data.get('periodo'),
-                data_elaboracao=data_elaboracao,
+                data_elaboracao=aluno_data.get('data_elaboracao'),
                 responsavel=aluno_data.get('responsavel'),
-                data_nascimento=data_nascimento,
-                idade=idade,
+                data_nascimento=aluno_data.get('data_nascimento'),
+                idade=aluno_data.get('idade'),
                 diagnostico_cid=aluno_data.get('diagnostico_cid'),
                 transtorno_identificado=aluno_data.get('transtorno_identificado'),
                 laudo_medico=aluno_data.get('laudo_medico'),
@@ -117,7 +155,7 @@ def criar_pei():
                 outros_profissionais=aluno_data.get('outros_profissionais'),
                 perfil_aluno=aluno_data.get('perfil_aluno'),
                 observacoes_gerais=aluno_data.get('observacoes_gerais'),
-                proxima_avaliacao=proxima_avaliacao,
+                proxima_avaliacao=aluno_data.get('proxima_avaliacao'),
                 responsavel_legal=aluno_data.get('responsavel_legal'),
                 orientador_responsavel=aluno_data.get('orientador_responsavel'),
                 supervisor=aluno_data.get('supervisor'),
@@ -126,15 +164,11 @@ def criar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-        # Upload de arquivo
+        # Upload do arquivo
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
                 filename = secure_filename(file.filename)
-
-                # Garantir que a pasta de upload exista
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 aluno.laudo_medico_arquivo = filename
 
@@ -182,8 +216,8 @@ def buscar_aluno_por_id(student_id):
     if pei:
         try:
             conteudo = json.loads(pei.conteudo) if isinstance(pei.conteudo, str) else pei.conteudo
-        except Exception as e:
-            print(f"[ERRO] Falha ao carregar conteúdo do PEI: {e}")
+        except:
+            pass
     aluno_dict.update({
         'meta_curto_prazo': conteudo.get('metas', {}).get('curto_prazo', {}).get('meta', ''),
         'responsavel_curto': conteudo.get('metas', {}).get('curto_prazo', {}).get('responsavel', ''),
@@ -425,7 +459,8 @@ def baixar_excel():
             aluno.idade, aluno.diagnostico_cid, aluno.transtorno_identificado,
             aluno.laudo_medico, aluno.psicologo, aluno.psiquiatra,
             aluno.psicopedagogo, aluno.outros_profissionais, aluno.perfil_aluno,
-            aluno.observacoes_gerais, aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
+            aluno.observacoes_gerais,
+            aluno.proxima_avaliacao.isoformat() if aluno.proxima_avaliacao else "",
             aluno.responsavel_legal, aluno.orientador_responsavel, aluno.supervisor,
             aluno.gerente_unidade
         ])
