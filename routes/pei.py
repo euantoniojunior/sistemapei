@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string, send_file
+from flask import Blueprint, request, jsonify, render_template_string, send_file, current_app
 from models.models import Student, PEI, PEIHistory
 from database.connection import db
 import pdfkit
@@ -13,10 +13,8 @@ from io import BytesIO
 
 pei_bp = Blueprint('pei', __name__)
 
-UPLOAD_FOLDER = 'static/laudos'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
-
 def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def parse_date(date_str):
@@ -31,7 +29,10 @@ def parse_date(date_str):
 @pei_bp.route('/api/pei', methods=['POST'])
 def criar_pei():
     try:
-        # Verifica se é JSON ou form-data
+        # Pegar UPLOAD_FOLDER do contexto do app
+        UPLOAD_FOLDER = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Garante que a pasta exista
+
         if request.is_json:
             data = request.get_json()
             aluno_data = data.get('aluno')
@@ -56,6 +57,16 @@ def criar_pei():
 
         student_id = aluno_data.get('student_id')
 
+        idade = aluno_data.get('idade')
+        try:
+            idade = int(idade) if idade and str(idade).strip() != '' else None
+        except (ValueError, TypeError):
+            idade = None
+
+        data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
+        data_nascimento = parse_date(aluno_data.get('data_nascimento'))
+        proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
+
         # Se for edição
         if student_id and str(student_id).isdigit():
             aluno = Student.query.get(int(student_id))
@@ -63,13 +74,14 @@ def criar_pei():
                 return jsonify({"error": "Aluno não encontrado"}), 404
 
             # Campos editáveis
+            aluno.nome = nome
             aluno.curso = aluno_data.get('curso')
             aluno.unidade = aluno_data.get('unidade')
             aluno.periodo = aluno_data.get('periodo')
-            aluno.data_elaboracao = parse_date(aluno_data.get('data_elaboracao'))
+            aluno.data_elaboracao = data_elaboracao
             aluno.responsavel = aluno_data.get('responsavel')
-            aluno.data_nascimento = parse_date(aluno_data.get('data_nascimento'))
-            aluno.idade = aluno_data.get('idade')
+            aluno.data_nascimento = data_nascimento
+            aluno.idade = idade
             aluno.diagnostico_cid = aluno_data.get('diagnostico_cid')
             aluno.transtorno_identificado = aluno_data.get('transtorno_identificado')
             aluno.laudo_medico = aluno_data.get('laudo_medico')
@@ -79,7 +91,7 @@ def criar_pei():
             aluno.outros_profissionais = aluno_data.get('outros_profissionais')
             aluno.perfil_aluno = aluno_data.get('perfil_aluno')
             aluno.observacoes_gerais = aluno_data.get('observacoes_gerais')
-            aluno.proxima_avaliacao = parse_date(aluno_data.get('proxima_avaliacao'))
+            aluno.proxima_avaliacao = proxima_avaliacao
             aluno.responsavel_legal = aluno_data.get('responsavel_legal')
             aluno.orientador_responsavel = aluno_data.get('orientador_responsavel')
             aluno.supervisor = aluno_data.get('supervisor')
@@ -87,20 +99,14 @@ def criar_pei():
 
         # Se for novo cadastro
         else:
-            idade = aluno_data.get('idade')
-            try:
-                idade = int(idade) if idade not in [None, "", " "] else None
-            except (ValueError, TypeError):
-                idade = None
-
             aluno = Student(
                 nome=nome,
                 curso=aluno_data.get('curso'),
                 unidade=aluno_data.get('unidade'),
                 periodo=aluno_data.get('periodo'),
-                data_elaboracao=parse_date(aluno_data.get('data_elaboracao')),
+                data_elaboracao=data_elaboracao,
                 responsavel=aluno_data.get('responsavel'),
-                data_nascimento=parse_date(aluno_data.get('data_nascimento')),
+                data_nascimento=data_nascimento,
                 idade=idade,
                 diagnostico_cid=aluno_data.get('diagnostico_cid'),
                 transtorno_identificado=aluno_data.get('transtorno_identificado'),
@@ -111,7 +117,7 @@ def criar_pei():
                 outros_profissionais=aluno_data.get('outros_profissionais'),
                 perfil_aluno=aluno_data.get('perfil_aluno'),
                 observacoes_gerais=aluno_data.get('observacoes_gerais'),
-                proxima_avaliacao=parse_date(aluno_data.get('proxima_avaliacao')),
+                proxima_avaliacao=proxima_avaliacao,
                 responsavel_legal=aluno_data.get('responsavel_legal'),
                 orientador_responsavel=aluno_data.get('orientador_responsavel'),
                 supervisor=aluno_data.get('supervisor'),
@@ -120,11 +126,15 @@ def criar_pei():
             db.session.add(aluno)
             db.session.flush()
 
-        # Upload do arquivo
+        # Upload de arquivo
         if 'laudo_medico_arquivo' in request.files:
             file = request.files['laudo_medico_arquivo']
             if file.filename != '':
                 filename = secure_filename(file.filename)
+
+                # Garantir que a pasta de upload exista
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 aluno.laudo_medico_arquivo = filename
 
@@ -156,10 +166,11 @@ def criar_pei():
         return jsonify({
             "error": "Erro ao salvar o PEI",
             "detalhe": str(e),
-            "payload": aluno_data  # Útil para debug
+            "payload": aluno_data
         }), 500
 
-# Busca aluno por ID
+
+# Buscar aluno por ID
 @pei_bp.route('/api/alunos/<int:student_id>', methods=['GET'])
 def buscar_aluno_por_id(student_id):
     aluno = Student.query.get(student_id)
@@ -188,6 +199,7 @@ def buscar_aluno_por_id(student_id):
         'intervencoes_complementares': conteudo.get('intervencoes_complementares', '')
     })
     return jsonify({'aluno': aluno_dict, 'conteudo': conteudo}), 200
+
 
 # Buscar alunos por nome
 @pei_bp.route('/api/alunos', methods=['GET'])
@@ -222,6 +234,7 @@ def buscar_alunos():
         'gerente_unidade': a.gerente_unidade
     } for a in alunos]), 200
 
+
 # Listar todos os alunos
 @pei_bp.route('/api/alunos/listar', methods=['GET'])
 def listar_todos_alunos():
@@ -234,12 +247,14 @@ def listar_todos_alunos():
         'proxima_avaliacao': a.proxima_avaliacao.isoformat() if a.proxima_avaliacao else ""
     } for a in alunos]), 200
 
-# Exportar PDF
+
+# Exportação PDF
 @pei_bp.route('/api/pei/pdf', methods=['POST'])
 def gerar_pdf():
     dados = request.get_json()
     if not dados:
         return jsonify({"error": "Dados inválidos para exportação"}), 400
+
     logo_url = request.url_root + 'static/assets/senac-logo.png'
     template = """
     <html><head><meta charset="UTF-8"><style>
@@ -283,6 +298,7 @@ def gerar_pdf():
     </div>
     </body></html>
     """
+
     rendered = render_template_string(template, logo_url=logo_url, **dados)
     options = {
         'encoding': 'utf-8',
@@ -301,7 +317,8 @@ def gerar_pdf():
             "detalhe": str(e)
         }), 500
 
-# Histórico
+
+# Histórico de alterações
 @pei_bp.route('/api/pei/historico/<int:student_id>', methods=['GET'])
 def get_historico_pei(student_id):
     aluno = Student.query.get(student_id)
@@ -324,7 +341,8 @@ def get_historico_pei(student_id):
         })
     return jsonify(resultado), 200
 
-# Versão específica do histórico
+
+# Carregar versão específica do histórico
 @pei_bp.route('/api/pei/historico/versao/<int:history_id>', methods=['GET'])
 def get_versao_historico(history_id):
     historia = PEIHistory.query.get(history_id)
@@ -344,6 +362,7 @@ def get_versao_historico(history_id):
         })
     except Exception as e:
         return jsonify({"error": "Erro ao carregar versão", "detalhe": str(e)}), 500
+
 
 # Baixar CSV
 @pei_bp.route('/api/alunos/csv', methods=['GET'])
@@ -379,6 +398,7 @@ def baixar_csv():
         "Content-Type": "text/csv",
         "Content-Disposition": "attachment; filename=alunos.csv"
     }
+
 
 # Baixar Excel
 @pei_bp.route('/api/alunos/excel', methods=['GET'])
@@ -418,6 +438,7 @@ def baixar_excel():
         as_attachment=True,
         download_name='alunos_pei.xlsx'
     )
+
 
 # Excluir aluno
 @pei_bp.route('/api/alunos/excluir/<int:id>', methods=['DELETE'])
