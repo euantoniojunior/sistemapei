@@ -15,7 +15,7 @@ app = Flask(__name__,
             template_folder='templates')
 
 # Configurações de Upload
-UPLOAD_FOLDER = 'static/laudos'
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'static/laudos')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
