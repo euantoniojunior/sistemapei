@@ -3,10 +3,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
 
-
 class User(db.Model):
     __tablename__ = 'user'
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -28,10 +26,8 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-
 class Student(db.Model):
     __tablename__ = 'student'
-
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(150), nullable=False)
     curso = db.Column(db.String(100))
@@ -58,7 +54,6 @@ class Student(db.Model):
     gerente_unidade = db.Column(db.String(150))
 
     def to_dict(self):
-        """Retorna os dados do aluno como dicionário"""
         return {
             'id': self.id,
             'nome': self.nome,
@@ -88,19 +83,15 @@ class Student(db.Model):
     def __repr__(self):
         return f'<Student {self.nome}>'
 
-
 class PEI(db.Model):
     __tablename__ = 'pei'
-
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
     conteudo = db.Column(db.Text)  # JSON com todo conteúdo do PEI
     data_registro = db.Column(db.DateTime, default=datetime.utcnow)
-
     aluno = db.relationship('Student', backref='peis')
 
     def get_conteudo(self):
-        """Retorna o conteúdo do PEI como dicionário JSON"""
         try:
             return json.loads(self.conteudo) if isinstance(self.conteudo, str) else self.conteudo
         except Exception as e:
@@ -110,10 +101,8 @@ class PEI(db.Model):
     def __repr__(self):
         return f'<PEI ID={self.id}, Aluno ID={self.student_id}>'
 
-
 class PEIHistory(db.Model):
     __tablename__ = 'pei_history'
-
     id = db.Column(db.Integer, primary_key=True)
     pei_id = db.Column(db.Integer, db.ForeignKey('pei.id'))
     editado_por = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -127,7 +116,14 @@ class PEIHistory(db.Model):
     aluno = db.relationship('Student', backref='historico_pei')
 
     def to_dict(self):
-        """Retorna histórico como dicionário JSON"""
+        try:
+            anterior = json.loads(self.conteudo_anterior) if self.conteudo_anterior else {}
+        except:
+            anterior = {}
+        try:
+            novo = json.loads(self.conteudo_novo) if self.conteudo_novo else {}
+        except:
+            novo = {}
         return {
             'historico_id': self.id,
             'pei_id': self.pei_id,
@@ -135,8 +131,8 @@ class PEIHistory(db.Model):
             'editado_por': self.editado_por,
             'usuario': self.editor.username if self.editor else "Desconhecido",
             'data_edicao': self.data_edicao.isoformat(),
-            'conteudo_anterior': json.loads(self.conteudo_anterior) if self.conteudo_anterior else {},
-            'conteudo_novo': json.loads(self.conteudo_novo) if self.conteudo_novo else {}
+            'conteudo_anterior': anterior,
+            'conteudo_novo': novo
         }
 
     def __repr__(self):
