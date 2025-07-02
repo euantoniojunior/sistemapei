@@ -16,33 +16,6 @@ app = Flask(__name__,
 
 
 
-# Garante que a coluna student_id exista na tabela pei_history
-with app.app_context():
-    from sqlalchemy import text
-
-    sql = """
-    DO $$
-    BEGIN
-        IF NOT EXISTS (
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_name = 'pei_history' AND column_name = 'student_id'
-        ) THEN
-            ALTER TABLE pei_history ADD COLUMN student_id INTEGER REFERENCES student(id);
-        END IF;
-    END $$;
-    """
-
-    try:
-        db.session.execute(text(sql))
-        db.session.commit()
-        print("✅ Coluna 'student_id' verificada/inserida corretamente.")
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Erro ao verificar/adicionar coluna: {e}")
-
-
-
 # Configurações de Upload
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'static/laudos')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx'}
@@ -60,6 +33,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa banco
 db.init_app(app)
+
+
 
 # Registra blueprints
 app.register_blueprint(auth_bp)
@@ -237,6 +212,30 @@ def inicializar_aplicacao():
         criar_usuarios_padrao()
         app.inicializado = True
 
+# Garante que a coluna student_id exista na tabela pei_history
+with app.app_context():
+    from sqlalchemy import text
+
+    sql = """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'pei_history' AND column_name = 'student_id'
+        ) THEN
+            ALTER TABLE pei_history ADD COLUMN student_id INTEGER REFERENCES student(id);
+        END IF;
+    END $$;
+    """
+
+    try:
+        db.session.execute(text(sql))
+        db.session.commit()
+        print("✅ Coluna 'student_id' verificada/inserida corretamente.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao verificar/adicionar coluna: {e}")
 
 # ========== RODAR LOCALMENTE (opcional) ==========
 if __name__ == '__main__':
