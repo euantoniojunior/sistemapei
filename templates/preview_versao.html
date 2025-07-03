@@ -4,21 +4,20 @@
     <meta charset="UTF-8">
     <title>Versão do PEI</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: #f4f4f4; 
+            background-color: #f4f7fa;
             margin: 0;
             padding: 0;
         }
 
-        .form-container {
+        .container {
             max-width: 900px;
             margin: 40px auto;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
             padding: 30px;
         }
 
@@ -28,28 +27,16 @@
             margin-bottom: 20px;
         }
 
-        .dados {
-            margin-bottom: 20px;
-        }
-
         .dados strong {
-            display: inline-block;
-            min-width: 140px;
-            margin-bottom: 10px;
-        }
-
-        .metas {
-            margin-top: 30px;
-        }
-
-        .metas h3 {
-            color: #003D7C;
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
         }
 
         .metas table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin-top: 20px;
         }
 
         .metas th, .metas td {
@@ -66,16 +53,8 @@
         }
 
         .assinatura div {
+            width: 24%;
             text-align: center;
-        }
-
-        .assinatura div::after {
-            content: "";
-            display: block;
-            margin: 10px auto;
-            width: 200px;
-            height: 1px;
-            background-color: #333;
         }
 
         .actions {
@@ -83,6 +62,8 @@
             margin-top: 40px;
         }
 
+        .btn-imprimir,
+        .btn-exportar,
         .btn-voltar {
             background-color: #003D7C;
             color: white;
@@ -91,9 +72,11 @@
             font-size: 14px;
             border-radius: 6px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            margin: 0 5px;
         }
 
+        .btn-imprimir:hover,
+        .btn-exportar:hover,
         .btn-voltar:hover {
             background-color: #002a54;
         }
@@ -101,72 +84,68 @@
 </head>
 <body>
 
-<div class="form-container">
-    <h2>Visualizar Versão do PEI</h2>
+<div class="container">
+    <h2>Versão do PEI</h2>
 
     <!-- Dados do Aluno -->
-    <div class="dados">
+    <div class="dados" id="dados-aluno">
         <h3>Dados do Aluno</h3>
-        <p><strong>ID:</strong> <span id="aluno-id"></span></p>
-        <p><strong>Nome:</strong> <span id="aluno-nome"></span></p>
-        <p><strong>Curso:</strong> <span id="aluno-curso"></span></p>
-        <p><strong>Unidade:</strong> <span id="aluno-unidade"></span></p>
-        <p><strong>Período Letivo:</strong> <span id="aluno-periodo"></span></p>
-        <p><strong>Data de Elaboração:</strong> <span id="aluno-data_elaboracao"></span></p>
-        <p><strong>Responsável:</strong> <span id="aluno-responsavel"></span></p>
-        <p><strong>Data de Nascimento:</strong> <span id="aluno-data_nascimento"></span></p>
-        <p><strong>Idade:</strong> <span id="aluno-idade"></span></p>
-        <p><strong>Diagnóstico CID:</strong> <span id="aluno-diagnostico_cid"></span></p>
-        <p><strong>Transtorno Identificado:</strong> <span id="aluno-transtorno_identificado"></span></p>
-        <p><strong>Laudo Médico:</strong> <span id="aluno-laudo_medico"></span></p>
-        <p><strong>Psicólogo:</strong> <span id="aluno-psicologo"></span></p>
-        <p><strong>Psiquiatra:</strong> <span id="aluno-psiquiatra"></span></p>
-        <p><strong>Psicopedagogo:</strong> <span id="aluno-psicopedagogo"></span></p>
-        <p><strong>Outros Profissionais:</strong> <span id="aluno-outros_profissionais"></span></p>
-        <p><strong>Responsável Legal:</strong> <span id="aluno-responsavel_legal"></span></p>
-        <p><strong>Orientador Responsável:</strong> <span id="aluno-orientador_responsavel"></span></p>
-        <p><strong>Supervisor:</strong> <span id="aluno-supervisor"></span></p>
-        <p><strong>Gerente da Unidade:</strong> <span id="aluno-gerente_unidade"></span></p>
+        <strong>ID:</strong> <span id="aluno-id"></span><br>
+        <strong>Nome:</strong> <span id="aluno-nome"></span><br>
+        <strong>Curso:</strong> <span id="aluno-curso"></span><br>
+        <strong>Unidade:</strong> <span id="aluno-unidade"></span><br>
+        <strong>Período Letivo:</strong> <span id="aluno-periodo"></span><br>
+        <strong>Data de Elaboração:</strong> <span id="aluno-data_elaboracao"></span><br>
+        <strong>Responsável:</strong> <span id="aluno-responsavel"></span><br>
+        <strong>Data de Nascimento:</strong> <span id="aluno-data_nascimento"></span><br>
+        <strong>Idade:</strong> <span id="aluno-idade"></span><br>
+        <strong>Diagnóstico CID:</strong> <span id="aluno-diagnostico_cid"></span><br>
+        <strong>Transtorno Identificado:</strong> <span id="aluno-transtorno_identificado"></span><br>
+        <strong>Laudo Médico:</strong> <span id="aluno-laudo_medico"></span><br>
+        <strong>Psicólogo:</strong> <span id="aluno-psicologo"></span><br>
+        <strong>Psiquiatra:</strong> <span id="aluno-psiquiatra"></span><br>
+        <strong>Psicopedagogo:</strong> <span id="aluno-psicopedagogo"></span><br>
+        <strong>Outros Profissionais:</strong> <span id="aluno-outros_profissionais"></span><br>
+        <strong>Perfil do Aluno:</strong> <span id="aluno-perfil_aluno"></span><br>
+        <strong>Observações Gerais:</strong> <span id="aluno-observacoes_gerais"></span><br>
+        <strong>Próxima Avaliação:</strong> <span id="aluno-proxima_avaliacao"></span><br>
     </div>
 
-    <!-- Conteúdo do PEI -->
-    <div class="dados">
+    <div class="dados" id="dados-peis">
         <h3>Conteúdo do PEI</h3>
-        <p><strong>Objetivos Gerais:</strong> <span id="conteudo-objetivos_gerais"></span></p>
-        <p><strong>Adaptações Pedagógicas:</strong> <span id="conteudo-adaptaçoes_pedagogicas"></span></p>
-        <p><strong>Intervenções Complementares:</strong> <span id="conteudo-intervencoes_complementares"></span></p>
+        <strong>Objetivos Gerais:</strong> <span id="conteudo-objetivos_gerais"></span><br>
+        <strong>Adaptações Pedagógicas:</strong> <span id="conteudo-adaptaçoes_pedagogicas"></span><br>
+        <strong>Intervenções Complementares:</strong> <span id="conteudo-intervencoes_complementares"></span><br>
 
-        <div class="metas">
-            <h3>Metas Individuais</h3>
-            <table>
-                <tr><th>Método</th><th>Meta</th><th>Responsável</th><th>Avaliação</th></tr>
-                <tr>
-                    <td>Curto prazo</td>
-                    <td><span id="curto-meta"></span></td>
-                    <td><span id="curto-responsavel"></span></td>
-                    <td><span id="curto-avaliacao"></span></td>
-                </tr>
-                <tr>
-                    <td>Médio prazo</td>
-                    <td><span id="medio-meta"></span></td>
-                    <td><span id="medio-responsavel"></span></td>
-                    <td><span id="medio-avaliacao"></span></td>
-                </tr>
-                <tr>
-                    <td>Longo prazo</td>
-                    <td><span id="longo-meta"></span></td>
-                    <td><span id="longo-responsavel"></span></td>
-                    <td><span id="longo-avaliacao"></span></td>
-                </tr>
-            </table>
-        </div>
-
-        <p><strong>Perfil do Aluno:</strong> <span id="conteudo-perfil_aluno"></span></p>
-        <p><strong>Observações Gerais:</strong> <span id="conteudo-observacoes_gerais"></span></p>
-        <p><strong>Próxima Avaliação:</strong> <span id="aluno-proxima_avaliacao"></span></p>
+        <h3>Metas Individuais</h3>
+        <table class="metas">
+            <tr>
+                <th>Método</th>
+                <th>Meta</th>
+                <th>Responsável</th>
+                <th>Avaliação</th>
+            </tr>
+            <tr>
+                <td>Curto prazo</td>
+                <td><span id="curto-meta"></span></td>
+                <td><span id="curto-responsavel"></span></td>
+                <td><span id="curto-avaliacao"></span></td>
+            </tr>
+            <tr>
+                <td>Médio prazo</td>
+                <td><span id="medio-meta"></span></td>
+                <td><span id="medio-responsavel"></span></td>
+                <td><span id="medio-avaliacao"></span></td>
+            </tr>
+            <tr>
+                <td>Longo prazo</td>
+                <td><span id="longo-meta"></span></td>
+                <td><span id="longo-responsavel"></span></td>
+                <td><span id="longo-avaliacao"></span></td>
+            </tr>
+        </table>
     </div>
 
-    <!-- Assinaturas -->
     <div class="assinatura">
         <div>
             <strong>Responsável Legal</strong><br>
@@ -190,13 +169,87 @@
         </div>
     </div>
 
-    <!-- Ações -->
     <div class="actions">
-        <button class="btn-voltar" onclick="location.href='/dashboard'">← Voltar</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn-exportar" onclick="exportarPDF()">📄 Exportar PDF</button>
+        <button class="btn-voltar" onclick="window.history.back()">↩️ Voltar</button>
     </div>
 </div>
 
 <script>
+    async function exportarPDF() {
+        const aluno = {
+            id: document.getElementById("aluno-id").textContent,
+            nome: document.getElementById("aluno-nome").textContent,
+            curso: document.getElementById("aluno-curso").textContent,
+            unidade: document.getElementById("aluno-unidade").textContent,
+            periodo: document.getElementById("aluno-periodo").textContent,
+            data_elaboracao: document.getElementById("aluno-data_elaboracao").textContent,
+            responsavel: document.getElementById("aluno-responsavel").textContent,
+            data_nascimento: document.getElementById("aluno-data_nascimento").textContent,
+            idade: document.getElementById("aluno-idade").textContent,
+            diagnostico_cid: document.getElementById("aluno-diagnostico_cid").textContent,
+            transtorno_identificado: document.getElementById("aluno-transtorno_identificado").textContent,
+            laudo_medico: document.getElementById("aluno-laudo_medico").textContent,
+            psicologo: document.getElementById("aluno-psicologo").textContent,
+            psiquiatra: document.getElementById("aluno-psiquiatra").textContent,
+            psicopedagogo: document.getElementById("aluno-psicopedagogo").textContent,
+            outros_profissionais: document.getElementById("aluno-outros_profissionais").textContent,
+            perfil_aluno: document.getElementById("aluno-perfil_aluno").textContent,
+            observacoes_gerais: document.getElementById("aluno-observacoes_gerais").textContent,
+            proxima_avaliacao: document.getElementById("aluno-proxima_avaliacao").textContent,
+            responsavel_legal: document.getElementById("aluno-responsavel_legal").textContent,
+            orientador_responsavel: document.getElementById("aluno-orientador_responsavel").textContent,
+            supervisor: document.getElementById("aluno-supervisor").textContent,
+            gerente_unidade: document.getElementById("aluno-gerente_unidade").textContent
+        };
+
+        const conteudo = {
+            objetivos_gerais: document.getElementById("conteudo-objetivos_gerais").textContent,
+            adaptaçoes_pedagogicas: document.getElementById("conteudo-adaptaçoes_pedagogicas").textContent,
+            intervencoes_complementares: document.getElementById("conteudo-intervencoes_complementares").textContent,
+            metas: {
+                curto_prazo: {
+                    meta: document.getElementById("curto-meta").textContent,
+                    responsavel: document.getElementById("curto-responsavel").textContent,
+                    avaliacao: document.getElementById("curto-avaliacao").textContent
+                },
+                medio_prazo: {
+                    meta: document.getElementById("medio-meta").textContent,
+                    responsavel: document.getElementById("medio-responsavel").textContent,
+                    avaliacao: document.getElementById("medio-avaliacao").textContent
+                },
+                longo_prazo: {
+                    meta: document.getElementById("longo-meta").textContent,
+                    responsavel: document.getElementById("longo-responsavel").textContent,
+                    avaliacao: document.getElementById("longo-avaliacao").textContent
+                }
+            }
+        };
+
+        try {
+            const res = await fetch('/api/pei/pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ aluno, conteudo })
+            });
+
+            if (res.ok) {
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = 'pei_historico.pdf';
+                link.click();
+            } else {
+                alert("❌ Erro ao gerar PDF");
+            }
+        } catch (err) {
+            console.error("Erro ao exportar PDF:", err);
+            alert("❌ Erro ao exportar para PDF.");
+        }
+    }
+
+    // Carrega os dados ao acessar a página
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const history_id = urlParams.get('history_id');
@@ -211,21 +264,21 @@
             const data = await res.json();
 
             if (!res.ok || !data.aluno || !data.conteudo) {
-                throw new Error(data.error || "Dados inválidos");
+                throw new Error(data.error || "Dados inválidos retornados");
             }
 
             const aluno = data.aluno;
             const conteudo = data.conteudo;
 
-            // Preenche dados do aluno
+            // Preenche os dados do aluno
             document.getElementById("aluno-id").textContent = aluno.id;
             document.getElementById("aluno-nome").textContent = aluno.nome;
             document.getElementById("aluno-curso").textContent = aluno.curso;
             document.getElementById("aluno-unidade").textContent = aluno.unidade;
             document.getElementById("aluno-periodo").textContent = aluno.periodo;
-            document.getElementById("aluno-data_elaboracao").textContent = formatarData(aluno.data_elaboracao);
+            document.getElementById("aluno-data_elaboracao").textContent = aluno.data_elaboracao ? new Date(aluno.data_elaboracao).toLocaleDateString() : "N/A";
             document.getElementById("aluno-responsavel").textContent = aluno.responsavel;
-            document.getElementById("aluno-data_nascimento").textContent = formatarData(aluno.data_nascimento);
+            document.getElementById("aluno-data_nascimento").textContent = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString() : "N/A";
             document.getElementById("aluno-idade").textContent = aluno.idade;
             document.getElementById("aluno-diagnostico_cid").textContent = aluno.diagnostico_cid;
             document.getElementById("aluno-transtorno_identificado").textContent = aluno.transtorno_identificado;
@@ -234,17 +287,13 @@
             document.getElementById("aluno-psiquiatra").textContent = aluno.psiquiatra;
             document.getElementById("aluno-psicopedagogo").textContent = aluno.psicopedagogo;
             document.getElementById("aluno-outros_profissionais").textContent = aluno.outros_profissionais;
+            document.getElementById("aluno-perfil_aluno").textContent = aluno.perfil_aluno;
+            document.getElementById("aluno-observacoes_gerais").textContent = aluno.observacoes_gerais;
+            document.getElementById("aluno-proxima_avaliacao").textContent = aluno.proxima_avaliacao ? new Date(aluno.proxima_avaliacao).toLocaleDateString() : "N/A";
             document.getElementById("aluno-responsavel_legal").textContent = aluno.responsavel_legal;
             document.getElementById("aluno-orientador_responsavel").textContent = aluno.orientador_responsavel;
             document.getElementById("aluno-supervisor").textContent = aluno.supervisor;
             document.getElementById("aluno-gerente_unidade").textContent = aluno.gerente_unidade;
-
-            // Preenche conteúdo do PEI
-            document.getElementById("conteudo-objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
-            document.getElementById("conteudo-adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
-            document.getElementById("conteudo-intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
-            document.getElementById("conteudo-perfil_aluno").textContent = conteudo.perfil_aluno || "N/A";
-            document.getElementById("conteudo-observacoes_gerais").textContent = conteudo.observacoes_gerais || "N/A";
 
             // Metas
             document.getElementById("curto-meta").textContent = conteudo.metas?.curto_prazo?.meta || "N/A";
@@ -259,23 +308,15 @@
             document.getElementById("longo-responsavel").textContent = conteudo.metas?.longo_prazo?.responsavel || "N/A";
             document.getElementById("longo-avaliacao").textContent = conteudo.metas?.longo_prazo?.avaliacao || "N/A";
 
-            document.getElementById("aluno-proxima_avaliacao").textContent = formatarData(conteudo.proxima_avaliacao);
+            document.getElementById("conteudo-objetivos_gerais").textContent = conteudo.objetivos_gerais || "N/A";
+            document.getElementById("conteudo-adaptaçoes_pedagogicas").textContent = conteudo.adaptaçoes_pedagogicas || "N/A";
+            document.getElementById("conteudo-intervencoes_complementares").textContent = conteudo.intervencoes_complementares || "N/A";
 
         } catch (err) {
-            document.body.innerHTML = `<h2 style="color:red;">❌ Erro ao carregar versão: ${err.message}</h2>`;
+            document.body.innerHTML = `<h2 style='color:red;'>❌ Erro ao carregar versão: ${err.message}</h2>`;
+            console.error("Erro ao carregar versão:", err);
         }
     };
-
-    function formatarData(dataStr) {
-        if (!dataStr || dataStr === "N/A") return "N/A";
-        try {
-            const d = new Date(dataStr.split("T")[0]);
-            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-        } catch {
-            return "Inválida";
-        }
-    }
 </script>
-
 </body>
 </html>
