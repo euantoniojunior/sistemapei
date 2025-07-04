@@ -1,55 +1,154 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Criar Usuário</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>Criar Novo Usuário - Sistema PEI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 60px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .login-container img.logo {
+            width: 120px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #003D7C;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        button {
+            background-color: #F7931E;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #e67e22;
+        }
+
+        #msg {
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        #msg.green {
+            color: green;
+        }
+
+        #msg.red {
+            color: red;
+        }
+
+        .voltar-link {
+            display: block;
+            margin-top: 15px;
+            color: #003D7C;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .voltar-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-  <div class="login-container">
-    <img src="/static/assets/senac-logo.png" class="logo" alt="SENAC">
+
+<div class="login-container">
+    <img src="/static/assets/senac-logo.png" alt="SENAC" class="logo">
+
     <h2>Criar Novo Usuário</h2>
+
     <input type="text" id="username" placeholder="Novo usuário">
     <input type="password" id="password" placeholder="Senha">
+
     <button onclick="registrar()">Registrar</button>
+
     <p id="msg"></p>
-    <a href="/">Voltar ao Login</a>
-  </div>
 
-  <script>
+    <a href="/" class="voltar-link">← Voltar para Login</a>
+</div>
+
+<script>
+    const msgEl = document.getElementById('msg');
+
     async function registrar() {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const msgEl = document.getElementById('msg');
-      
-      // Validação simples no frontend
-      if (!username || !password) {
-        msgEl.style.color = 'red';
-        msgEl.innerText = 'Por favor, preencha todos os campos.';
-        return;
-      }
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
 
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+        if (!username || !password) {
+            msgEl.innerText = "⚠️ Preencha todos os campos.";
+            msgEl.className = "red";
+            return;
+        }
 
-      const data = await res.json();
+        if (password.length < 6) {
+            msgEl.innerText = "❌ Senha deve ter pelo menos 6 caracteres.";
+            msgEl.className = "red";
+            return;
+        }
 
-      if (res.ok) {
-        msgEl.style.color = 'green';  // ✅ Agora em verde!
-        msgEl.innerText = '✅ Usuário criado com sucesso!';
-        
-        // Redireciona após 2 segundos
-        setTimeout(() => {
-          location.href = '/';
-        }, 2000);
-      } else {
-        msgEl.style.color = 'red';
-        msgEl.innerText = '❌ ' + (data.error || 'Erro ao criar usuário.');
-      }
+        try {
+            const res = await fetch("/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                msgEl.className = "green";
+                msgEl.innerText = "✅ Usuário criado com sucesso!";
+                setTimeout(() => {
+                    location.href = "/";
+                }, 1500);
+            } else {
+                msgEl.className = "red";
+                msgEl.innerText = "❌ " + (data.error || "Erro ao criar usuário.");
+            }
+        } catch (err) {
+            console.error("Erro ao registrar:", err);
+            msgEl.className = "red";
+            msgEl.innerText = "❌ Erro na conexão com o servidor.";
+        }
     }
-  </script>
+</script>
+
 </body>
 </html>
