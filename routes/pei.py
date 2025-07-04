@@ -367,21 +367,28 @@ def get_historico_pei(student_id):
     aluno = Student.query.get(student_id)
     if not aluno:
         return jsonify({"error": "Aluno não encontrado"}), 404
+
     historico = PEIHistory.query.filter_by(student_id=student_id).all()
+
     resultado = []
     for h in historico:
         try:
             conteudo = json.loads(h.conteudo_novo) if isinstance(h.conteudo_novo, str) else h.conteudo_novo
         except:
             conteudo = {}
+
+        usuario = User.query.get(h.editado_por) if h.editado_por else None
+
         resultado.append({
             'historico_id': h.id,
             'pei_id': h.pei_id,
             'student_id': h.student_id,
             'editado_por': h.editado_por,
+            'usuario_nome': usuario.username if usuario else "Sistema",
             'data_edicao': h.data_edicao.isoformat(),
             'conteudo': conteudo
         })
+
     return jsonify(resultado), 200
 
 
